@@ -1,11 +1,15 @@
 # GoTLSAFlare
 
+Go binary for updating TLSA DANE record on cloudflare from TLS Certificate
+
+<br>
+
 ## Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record
 ```
 openssl x509 -noout -pubkey -in fullchain.pem | openssl rsa -pubin -outform DER 2>/dev/null | sha256sum
 ```
 
-## POST TSLA UPDATE
+## POST TLSA UPDATE
 ```
 https://api.cloudflare.com/client/v4/zones/:identifier/dns_records
 
