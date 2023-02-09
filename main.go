@@ -9,17 +9,56 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"time"
 )
 
-type JSONResponse struct {
-	Type   string `json:"type"`
-	Name   string `json:"name"`
-	Nested Nested `json:"data"`
+type JSONRequest struct {
+	Type     string `json:"type"`
+	Name     string `json:"name"`
+	Data     Data   `json:"data"`
+	Ttl      int    `json:"ttl"`
+	Priority int    `json:"priority"`
+	Proxied  bool   `json:"proxied"`
+	Comment  string `json:"comment"`
 }
 
-type Nested struct {
-	NestValue1 string `json:"nestkey1"`
-	NestValue2 string `json:"nestkey2"`
+type Data struct {
+	Usage        int    `json:"usage"`
+	Selector     int    `json:"selector"`
+	Matchingtype int    `json:"matching_type"`
+	Certificate  string `json:"certificate"`
+}
+
+func genCloudflareReq(port int, protocol string) string {
+	currentTime := time.Now()
+
+	Port := string(port)
+
+	data := Data{
+		Usage:        3,
+		Selector:     1,
+		Matchingtype: 1,
+		Certificate:  getSHA256sum(),
+	}
+
+	// "_"+Port+"._"+protocol+"test"
+
+	jsonRequest := JSONRequest{
+		Type:     "TLSA",
+		Name:     "_" + Port + "._" + protocol + "test",
+		Data:     data,
+		Ttl:      3600,
+		Priority: 10,
+		Proxied:  false,
+		Comment:  "Created/Updated by GoTLSAFlare " + currentTime.Format("2006-01-02 15:04:05"),
+	}
+
+	byteArray, err := json.MarshalIndent(jsonRequest, "", "  ")
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	return string(byteArray)
 }
 
 func getSHA256sum() string {
@@ -45,24 +84,6 @@ func getSHA256sum() string {
 
 func main() {
 
-	nested := Nested{
-		NestValue1: "nest value 1",
-		NestValue2: "nest value 2",
-	}
-
-	jsonResponse := JSONResponse{
-		Type:   "TLSA",
-		Name:   "_25._tcp.test",
-		Nested: nested,
-	}
-
-	fmt.Println("3 1 1 " + getSHA256sum())
-
-	byteArray, err := json.MarshalIndent(jsonResponse, "", "  ")
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(string(byteArray))
+	fmt.Println(genCloudflareReq())
 
 }
