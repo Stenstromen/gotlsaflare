@@ -101,7 +101,7 @@ func postToCloudflare() {
 	url := "https://api.cloudflare.com/client/v4/zones"
 
 	// Create a Bearer string by appending string access token
-	var bearer = "Bearer " + "SntWCUhue3xL-jHjR8AavjXHLUdjJYr4fI03vJQQ"
+	var bearer = "Bearer " + ""
 
 	// Create a new request using http
 	req, err := http.NewRequest("GET", url, nil)
