@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -97,11 +98,52 @@ type Res struct {
 	Messages []interface{} `json:"messages"`
 }
 
-func postToCloudflare() {
+type RecordsRes struct {
+	Result []struct {
+		ID        string `json:"id"`
+		ZoneID    string `json:"zone_id"`
+		ZoneName  string `json:"zone_name"`
+		Name      string `json:"name"`
+		Type      string `json:"type"`
+		Content   string `json:"content"`
+		Proxiable bool   `json:"proxiable"`
+		Proxied   bool   `json:"proxied"`
+		TTL       int    `json:"ttl"`
+		Locked    bool   `json:"locked"`
+		Data      struct {
+			Certificate  string `json:"certificate"`
+			MatchingType int    `json:"matching_type"`
+			Selector     int    `json:"selector"`
+			Usage        int    `json:"usage"`
+		} `json:"data"`
+		Meta struct {
+			AutoAdded           bool   `json:"auto_added"`
+			ManagedByApps       bool   `json:"managed_by_apps"`
+			ManagedByArgoTunnel bool   `json:"managed_by_argo_tunnel"`
+			Source              string `json:"source"`
+		} `json:"meta"`
+		Comment    string        `json:"comment"`
+		Tags       []interface{} `json:"tags"`
+		CreatedOn  time.Time     `json:"created_on"`
+		ModifiedOn time.Time     `json:"modified_on"`
+	} `json:"result"`
+	Success    bool          `json:"success"`
+	Errors     []interface{} `json:"errors"`
+	Messages   []interface{} `json:"messages"`
+	ResultInfo struct {
+		Page       int `json:"page"`
+		PerPage    int `json:"per_page"`
+		Count      int `json:"count"`
+		TotalCount int `json:"total_count"`
+		TotalPages int `json:"total_pages"`
+	} `json:"result_info"`
+}
+
+func postToCloudflare(postBody string) {
 	url := "https://api.cloudflare.com/client/v4/zones"
 
 	// Create a Bearer string by appending string access token
-	var bearer = "Bearer " + ""
+	var bearer = "Bearer " + os.Getenv("TOKEN")
 
 	// Create a new request using http
 	req, err := http.NewRequest("GET", url, nil)
@@ -123,17 +165,129 @@ func postToCloudflare() {
 	}
 	//var info map[string]interface{}
 	var res Res
-	if err := json.Unmarshal([]byte(body), &res); err != nil {
+	if err := json.Unmarshal(body, &res); err != nil {
 		os.Exit(1)
 	}
 
-	fmt.Printf(res)
-	//fmt.Printf("Species: %s, Description: %s", res, bird.Description)
-	//fmt.Println(info.Result["name"])
+	name := "filip.com.se"
+	if name != res.Result[0].Name {
+		os.Exit(1)
+		return
+	}
 
-	return
-	//log.Println(string([]byte(body)))
-	//log.Println()
+	fmt.Println(res.Result[0].ID)
+	fmt.Println(res.Result[0].Name)
+
+	posturl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records"
+	fmt.Println(posturl)
+	var jsonStr = []byte(postBody)
+	req2, err2 := http.NewRequest("POST", posturl, bytes.NewBuffer(jsonStr))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Add("Authorization", bearer)
+
+	client2 := &http.Client{}
+	resp2, err2 := client2.Do(req2)
+	if err2 != nil {
+		panic(err2)
+	}
+	defer resp.Body.Close()
+
+	fmt.Println("response Status:", resp2.Status)
+	fmt.Println("response Headers:", resp2.Header)
+	body2, _ := ioutil.ReadAll(resp2.Body)
+	fmt.Println("response Body:", string(body2))
+}
+
+func putToCloudflare(putBody string) {
+	url := "https://api.cloudflare.com/client/v4/zones"
+
+	// Create a Bearer string by appending string access token
+	var bearer = "Bearer " + os.Getenv("TOKEN")
+
+	// Create a new request using http
+	req, err := http.NewRequest("GET", url, nil)
+
+	// add authorization header to the req
+	req.Header.Add("Authorization", bearer)
+
+	// Send req using http Client
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error on response.\n[ERROR] -", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error while reading the response bytes:", err)
+	}
+	//var info map[string]interface{}
+	var res Res
+	if err := json.Unmarshal(body, &res); err != nil {
+		os.Exit(1)
+	}
+
+	//fmt.Println(res.Result[0].ID)
+
+	searchurl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records"
+	fmt.Println(searchurl)
+	req2, err2 := http.NewRequest("GET", searchurl, nil)
+	req2.Header.Add("Authorization", bearer)
+	client2 := &http.Client{}
+	resp2, err2 := client2.Do(req2)
+	if err2 != nil {
+		log.Println("Error on response.\n[ERROR] -", err)
+	}
+	defer resp2.Body.Close()
+	body2, err2 := ioutil.ReadAll(resp2.Body)
+	if err2 != nil {
+		log.Println("Error while reading the response bytes:", err)
+	}
+	//var info map[string]interface{}
+	var recordsres RecordsRes
+	if err2 := json.Unmarshal(body2, &recordsres); err2 != nil {
+		os.Exit(1)
+	}
+
+	var lol string
+
+	for i := range recordsres.Result {
+		if "_25._tcp.test.filip.com.se" == recordsres.Result[i].Name {
+			lol = recordsres.Result[i].ID
+		}
+	}
+
+	puturl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records/" + lol
+
+	fmt.Print(puturl)
+
+	var jsonStr = []byte(putBody)
+	req3, err3 := http.NewRequest("PUT", puturl, bytes.NewBuffer(jsonStr))
+	req3.Header.Set("Content-Type", "application/json")
+	req3.Header.Add("Authorization", bearer)
+
+	client3 := &http.Client{}
+	resp3, err3 := client3.Do(req3)
+	if err3 != nil {
+		panic(err3)
+	}
+	defer resp.Body.Close()
+
+	fmt.Println("response Status:", resp3.Status)
+	fmt.Println("response Headers:", resp3.Header)
+	body3, _ := ioutil.ReadAll(resp3.Body)
+	fmt.Println("response Body:", string(body3))
+
+	/* var identifier string
+
+	for i := range res.Result {
+		name := "filip.com.se"
+		fmt.Printf(res.Result[i].Name)
+		if name != res.Result[i].Name {
+			return res.Result[i].ID
+		}
+	} */
 }
 
 func genCloudflareReq(certfile string, port string, protocol string) string {
@@ -200,7 +354,9 @@ func main() {
 		var certfilez string = *certfile
 		if *createTLSA {
 			fmt.Println(genCloudflareReq(certfilez, "25", "tcp"))
+			postToCloudflare(genCloudflareReq(certfilez, "25", "tcp"))
 		} else if *updateTLSA {
+			putToCloudflare(genCloudflareReq(certfilez, "25", "tcp"))
 			fmt.Print("lol")
 		}
 		return
@@ -222,6 +378,6 @@ func main() {
 		return
 	}
 
-	postToCloudflare()
+	/* postToCloudflare() */
 	fmt.Println("lol")
 }
