@@ -4,6 +4,53 @@ Go binary for updating TLSA DANE record on cloudflare from TLS Certificate
 
 <br>
 
+## Generate Cloudflare API Token
+1. Visit [https://dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
+2. Create Token
+3. "Edit Zone DNS" Template
+4. "Zone Resources" Include > Specific Zone > example.com
+
+## Build and Run Binary
+```
+go build
+./gotlsaflare
+```
+
+## Example Usage
+```
+- GoTLSAFlare Example Usage
+
+- Create TLSA Record
+export TOKEN="# Cloudflare API TOKEN"
+./gotlsaflare -create -url example.com -subdomain email -25tcp -cert path/to/certificate.pem
+
+- Update TLSA Record
+export TOKEN="# Cloudflare API TOKEN"
+./gotlsaflare -update -url example.com -subdomain email -25tcp -cert path/to/certificate.pem
+
+Usage of ./gotlsaflare
+  -25tcp
+        Port 25/TCP
+  -465tcp
+        Port 465/TCP
+  -587tcp
+        Port 587/TCP
+  -cert string
+        Certificate File
+  -create
+        Create TLSA Record
+  -subdomain string
+        TLSA Subdomain
+  -update
+        Update TLSA Record
+  -url string
+        URL to Update or Create
+```
+
+<br>
+
+# Random Notes
+
 ## Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record
 ```
 openssl x509 -noout -pubkey -in fullchain.pem | openssl rsa -pubin -outform DER 2>/dev/null | sha256sum

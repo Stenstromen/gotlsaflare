@@ -139,19 +139,16 @@ type RecordsRes struct {
 	} `json:"result_info"`
 }
 
-func postToCloudflare(postBody string) {
+func postToCloudflare(portandprotocol string, nameanddomain string, postBody string) {
 	url := "https://api.cloudflare.com/client/v4/zones"
-
-	// Create a Bearer string by appending string access token
 	var bearer = "Bearer " + os.Getenv("TOKEN")
-
-	// Create a new request using http
 	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
 
-	// add authorization header to the req
 	req.Header.Add("Authorization", bearer)
-
-	// Send req using http Client
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -163,54 +160,53 @@ func postToCloudflare(postBody string) {
 	if err != nil {
 		log.Println("Error while reading the response bytes:", err)
 	}
-	//var info map[string]interface{}
 	var res Res
 	if err := json.Unmarshal(body, &res); err != nil {
+		log.Println(err)
 		os.Exit(1)
 	}
 
-	name := "filip.com.se"
-	if name != res.Result[0].Name {
-		os.Exit(1)
-		return
+	var did string
+
+	for i := range res.Result {
+		if nameanddomain == res.Result[i].Name {
+			did = res.Result[i].ID
+		}
 	}
 
-	fmt.Println(res.Result[0].ID)
-	fmt.Println(res.Result[0].Name)
-
-	posturl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records"
-	fmt.Println(posturl)
+	posturl := "https://api.cloudflare.com/client/v4/zones/" + did + "/dns_records"
 	var jsonStr = []byte(postBody)
 	req2, err2 := http.NewRequest("POST", posturl, bytes.NewBuffer(jsonStr))
+	if err2 != nil {
+		log.Println(err2)
+		os.Exit(1)
+	}
+
 	req2.Header.Set("Content-Type", "application/json")
 	req2.Header.Add("Authorization", bearer)
 
 	client2 := &http.Client{}
 	resp2, err2 := client2.Do(req2)
 	if err2 != nil {
-		panic(err2)
+		log.Println(err2)
+		os.Exit(1)
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("response Status:", resp2.Status)
-	fmt.Println("response Headers:", resp2.Header)
-	body2, _ := ioutil.ReadAll(resp2.Body)
-	fmt.Println("response Body:", string(body2))
+	log.Println("Cloudflare Response Status:", resp2.Status)
 }
 
-func putToCloudflare(putBody string) {
+func putToCloudflare(portandprotocol string, nameanddomain string, putBody string) {
 	url := "https://api.cloudflare.com/client/v4/zones"
-
-	// Create a Bearer string by appending string access token
 	var bearer = "Bearer " + os.Getenv("TOKEN")
-
-	// Create a new request using http
 	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
 
-	// add authorization header to the req
 	req.Header.Add("Authorization", bearer)
 
-	// Send req using http Client
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -222,17 +218,20 @@ func putToCloudflare(putBody string) {
 	if err != nil {
 		log.Println("Error while reading the response bytes:", err)
 	}
-	//var info map[string]interface{}
+
 	var res Res
 	if err := json.Unmarshal(body, &res); err != nil {
+		log.Println(err)
 		os.Exit(1)
 	}
 
-	//fmt.Println(res.Result[0].ID)
-
 	searchurl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records"
-	fmt.Println(searchurl)
 	req2, err2 := http.NewRequest("GET", searchurl, nil)
+	if err2 != nil {
+		log.Println(err2)
+		os.Exit(1)
+	}
+
 	req2.Header.Add("Authorization", bearer)
 	client2 := &http.Client{}
 	resp2, err2 := client2.Do(req2)
@@ -244,53 +243,46 @@ func putToCloudflare(putBody string) {
 	if err2 != nil {
 		log.Println("Error while reading the response bytes:", err)
 	}
-	//var info map[string]interface{}
+
 	var recordsres RecordsRes
 	if err2 := json.Unmarshal(body2, &recordsres); err2 != nil {
+		log.Println(err2)
 		os.Exit(1)
 	}
 
-	var lol string
+	var did string
 
 	for i := range recordsres.Result {
-		if "_25._tcp.test.filip.com.se" == recordsres.Result[i].Name {
-			lol = recordsres.Result[i].ID
+		if portandprotocol+nameanddomain == recordsres.Result[i].Name {
+			did = recordsres.Result[i].ID
+
 		}
 	}
 
-	puturl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records/" + lol
-
-	fmt.Print(puturl)
+	puturl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records/" + did
 
 	var jsonStr = []byte(putBody)
 	req3, err3 := http.NewRequest("PUT", puturl, bytes.NewBuffer(jsonStr))
+	if err3 != nil {
+		log.Println(err3)
+		os.Exit(1)
+	}
+
 	req3.Header.Set("Content-Type", "application/json")
 	req3.Header.Add("Authorization", bearer)
 
 	client3 := &http.Client{}
 	resp3, err3 := client3.Do(req3)
 	if err3 != nil {
-		panic(err3)
+		log.Println(err3)
+		os.Exit(1)
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("response Status:", resp3.Status)
-	fmt.Println("response Headers:", resp3.Header)
-	body3, _ := ioutil.ReadAll(resp3.Body)
-	fmt.Println("response Body:", string(body3))
-
-	/* var identifier string
-
-	for i := range res.Result {
-		name := "filip.com.se"
-		fmt.Printf(res.Result[i].Name)
-		if name != res.Result[i].Name {
-			return res.Result[i].ID
-		}
-	} */
+	log.Println("Cloudflare Response Status:", resp3.Status)
 }
 
-func genCloudflareReq(certfile string, port string, protocol string) string {
+func genCloudflareReq(certfile string, port string, protocol string, subdomain string, cu string) string {
 	currentTime := time.Now()
 
 	data := Data{
@@ -302,18 +294,19 @@ func genCloudflareReq(certfile string, port string, protocol string) string {
 
 	jsonRequest := JSONRequest{
 		Type:     "TLSA",
-		Name:     "_" + port + "._" + protocol + ".test",
+		Name:     "_" + port + "._" + protocol + "." + subdomain,
 		Data:     data,
 		Ttl:      3600,
 		Priority: 10,
 		Proxied:  false,
-		Comment:  "Created by GoTLSAFlare - " + currentTime.Format("2006-01-02 15:04:05"),
+		Comment:  cu + " by GoTLSAFlare - " + currentTime.Format("2006-01-02 15:04:05"),
 	}
 
 	byteArray, err := json.MarshalIndent(jsonRequest, "", "  ")
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
+		os.Exit(1)
 	}
 	return string(byteArray)
 }
@@ -321,18 +314,21 @@ func genCloudflareReq(certfile string, port string, protocol string) string {
 func getSHA256sum(certfile string) string {
 	pemContent, err := os.ReadFile(certfile)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		os.Exit(1)
 	}
 	block, _ := pem.Decode([]byte(pemContent))
 	if block == nil {
-		panic("Failed to parse pem file")
+		log.Println("Failed to parse pem file")
+		os.Exit(1)
 	}
 	var cert *x509.Certificate
 	cert, _ = x509.ParseCertificate(block.Bytes)
 	rsaPublicKey := cert.PublicKey.(*rsa.PublicKey)
 	keyDER, err := x509.MarshalPKIXPublicKey(rsaPublicKey)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		os.Exit(1)
 	}
 	sum := sha256.Sum256([]byte(keyDER))
 	sha256sum := hex.EncodeToString(sum[:])
@@ -340,6 +336,8 @@ func getSHA256sum(certfile string) string {
 }
 
 func main() {
+	fqdn := flag.String("url", "", "URL to Update or Create")
+	subdomain := flag.String("subdomain", "", "TLSA Subdomain")
 	createTLSA := flag.Bool("create", false, "Create TLSA Record")
 	updateTLSA := flag.Bool("update", false, "Update TLSA Record")
 	port25tcp := flag.Bool("25tcp", false, "Port 25/TCP")
@@ -352,32 +350,42 @@ func main() {
 	switch {
 	case *port25tcp:
 		var certfilez string = *certfile
+		var url string = *fqdn
+		var subdomain string = *subdomain
+		var suburl string = subdomain + "." + url
 		if *createTLSA {
-			fmt.Println(genCloudflareReq(certfilez, "25", "tcp"))
-			postToCloudflare(genCloudflareReq(certfilez, "25", "tcp"))
+			postToCloudflare("_25._tcp.", url, genCloudflareReq(certfilez, "25", "tcp", subdomain, "Created"))
 		} else if *updateTLSA {
-			putToCloudflare(genCloudflareReq(certfilez, "25", "tcp"))
-			fmt.Print("lol")
+			putToCloudflare("_25._tcp.", suburl, genCloudflareReq(certfilez, "25", "tcp", subdomain, "Updated"))
 		}
 		return
 	case *port465tcp:
 		var certfilez string = *certfile
+		var url string = *fqdn
+		var subdomain string = *subdomain
+		var suburl string = subdomain + "." + url
 		if *createTLSA {
-			fmt.Println(genCloudflareReq(certfilez, "465", "tcp"))
+			postToCloudflare("_465._tcp.", url, genCloudflareReq(certfilez, "465", "tcp", subdomain, "Created"))
 		} else if *updateTLSA {
-			fmt.Print("lol")
+			putToCloudflare("_465._tcp.", suburl, genCloudflareReq(certfilez, "465", "tcp", subdomain, "Updated"))
 		}
 		return
 	case *port587tcp:
 		var certfilez string = *certfile
+		var url string = *fqdn
+		var subdomain string = *subdomain
+		var suburl string = subdomain + "." + url
 		if *createTLSA {
-			fmt.Println(genCloudflareReq(certfilez, "587", "tcp"))
+			postToCloudflare("_587._tcp.", url, genCloudflareReq(certfilez, "587", "tcp", subdomain, "Created"))
 		} else if *updateTLSA {
-			fmt.Print("lol")
+			putToCloudflare("_587._tcp.", suburl, genCloudflareReq(certfilez, "587", "tcp", subdomain, "Updated"))
 		}
 		return
 	}
 
-	/* postToCloudflare() */
-	fmt.Println("lol")
+	fmt.Println("- GoTLSAFlare Example Usage\n")
+	fmt.Println("- Create TLSA Record")
+	fmt.Println("export TOKEN=\"# Cloudflare API TOKEN\"" + "\n" + "./gotlsaflare -create -url example.com -subdomain email -25tcp -cert path/to/certificate.pem\n")
+	fmt.Println("- Update TLSA Record")
+	fmt.Println("export TOKEN=\"# Cloudflare API TOKEN\"" + "\n" + "./gotlsaflare -update -url example.com -subdomain email -25tcp -cert path/to/certificate.pem")
 }
