@@ -14,7 +14,7 @@ jobs:
         with:
           fetch-depth: 0
       - run: git fetch --force --tags
-      
+
       - uses: actions/setup-go@v4
         with:
           go-version: stable
@@ -25,5 +25,6 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release --clean
+          workdir: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
