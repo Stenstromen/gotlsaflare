@@ -10,6 +10,10 @@ Go binary for updating TLSA DANE record on cloudflare from TLS Certificate
 3. "Edit Zone DNS" Template
 4. "Zone Resources" Include > Specific Zone > example.com
 
+## Download and Run Binary
+* For **MacOS** and **Linux**: Checkout and download the latest binary from [Releases page](https://github.com/Stenstromen/gotlsaflare/releases/latest/)
+* For **Windows**: Build the binary yourself.
+
 ## Build and Run Binary
 ```
 go build
