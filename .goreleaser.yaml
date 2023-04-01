@@ -13,3 +13,13 @@ archives:
       darwin: Darwin
       linux: Linux
       amd64: x86_64
+brews:
+  - name: gotlsaflare
+    tap:
+      owner: stenstromen
+      name: homebrew-tap
+    commit_author:
+      name: stenstromen
+    folder: Formula
+    homepage: https://github.com/Stenstromen/gomtastsflare
+    description: Go binary for updating TLSA DANE record on cloudflare from x509 Certificate

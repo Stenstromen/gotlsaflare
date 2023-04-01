@@ -1,6 +1,6 @@
 # GoTLSAFlare
 
-Go binary for updating TLSA DANE record on cloudflare from TLS Certificate
+Go binary for updating TLSA DANE record on cloudflare from x509 Certificate
 
 <br>
 
