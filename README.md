@@ -10,6 +10,11 @@ Go binary for updating TLSA DANE record on cloudflare from x509 Certificate
 3. "Edit Zone DNS" Template
 4. "Zone Resources" Include > Specific Zone > example.com
 
+## Installation via Homebrew (MacOS/Linux - x86_64/arm64)
+```
+brew install stenstromen/tap/gotlsaflare
+```
+
 ## Download and Run Binary
 * For **MacOS** and **Linux**: Checkout and download the latest binary from [Releases page](https://github.com/Stenstromen/gotlsaflare/releases/latest/)
 * For **Windows**: Build the binary yourself.
