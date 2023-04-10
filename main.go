@@ -1,5 +1,13 @@
 package main
 
+import "gotlsaflare/cmd"
+
+func main() {
+	cmd.Execute()
+}
+
+/* package main
+
 import (
 	"flag"
 	"fmt"
@@ -59,3 +67,4 @@ func main() {
 	fmt.Println("- Update TLSA Record")
 	fmt.Println("export TOKEN=\"# Cloudflare API TOKEN\"" + "\n" + "./gotlsaflare -update -url example.com -subdomain email -25tcp -cert path/to/certificate.pem")
 }
+*/
