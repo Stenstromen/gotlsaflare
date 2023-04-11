@@ -31,29 +31,28 @@ go build
 
 - Create TLSA Record
 export TOKEN="# Cloudflare API TOKEN"
-./gotlsaflare -create -url example.com -subdomain email -25tcp -cert path/to/certificate.pem
+./gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem
 
 - Update TLSA Record
 export TOKEN="# Cloudflare API TOKEN"
-./gotlsaflare -update -url example.com -subdomain email -25tcp -cert path/to/certificate.pem
+./gotlsaflare update --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem
 
 Usage of ./gotlsaflare
-  -25tcp
-        Port 25/TCP
-  -465tcp
-        Port 465/TCP
-  -587tcp
-        Port 587/TCP
-  -cert string
-        Certificate File
-  -create
-        Create TLSA Record
-  -subdomain string
-        TLSA Subdomain
-  -update
-        Update TLSA Record
-  -url string
-        URL to Update or Create
+Go binary for updating TLSA DANE record on cloudflare from x509 Certificate.
+
+Usage:
+  gotlsaflare [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  create      Create TLSA DNS Record
+  help        Help about any command
+  update      Update TLSA DNS Record
+
+Flags:
+  -h, --help   help for gotlsaflare
+
+Use "gotlsaflare [command] --help" for more information about a command.
 ```
 
 <br>
