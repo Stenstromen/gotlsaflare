@@ -1,13 +1,54 @@
-package main
+package resource
 
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/spf13/cobra"
 )
+
+func ResourceUpdate(cmd *cobra.Command, args []string) error {
+	url, err := cmd.Flags().GetString("url")
+	if err != nil {
+		return err
+	}
+	subdomain, err := cmd.Flags().GetString("subdomain")
+	if err != nil {
+		return err
+	}
+	cert, err := cmd.Flags().GetString("cert")
+	if err != nil {
+		return err
+	}
+	tcp25, err := cmd.Flags().GetBool("tcp25")
+	if err != nil {
+		return err
+	}
+	tcp465, err := cmd.Flags().GetBool("tcp465")
+	if err != nil {
+		return err
+	}
+	tcp587, err := cmd.Flags().GetBool("tcp587")
+	if err != nil {
+		return err
+	}
+
+	if tcp25 {
+		putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated"))
+	}
+	if tcp465 {
+		putToCloudflare("_465._tcp.", subdomain+"."+url, genCloudflareReq(cert, "465", "tcp", subdomain, "Updated"))
+	}
+	if tcp587 {
+		putToCloudflare("_587._tcp.", subdomain+"."+url, genCloudflareReq(cert, "587", "tcp", subdomain, "Updated"))
+	}
+
+	return nil
+}
 
 func putToCloudflare(portandprotocol string, nameanddomain string, putBody string) {
 	url := "https://api.cloudflare.com/client/v4/zones"
@@ -27,7 +68,7 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Error while reading the response bytes:", err)
 	}
@@ -52,7 +93,7 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 		log.Println("Error on response.\n[ERROR] -", err)
 	}
 	defer resp2.Body.Close()
-	body2, err2 := ioutil.ReadAll(resp2.Body)
+	body2, err2 := io.ReadAll(resp2.Body)
 	if err2 != nil {
 		log.Println("Error while reading the response bytes:", err)
 	}
