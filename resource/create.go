@@ -50,7 +50,7 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func postToCloudflare(portandprotocol string, nameanddomain string, postBody string) {
+func postToCloudflare(_ string, nameanddomain string, postBody string) {
 	url := "https://api.cloudflare.com/client/v4/zones"
 	var bearer = "Bearer " + os.Getenv("TOKEN")
 	req, err := http.NewRequest("GET", url, nil)

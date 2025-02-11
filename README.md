@@ -2,31 +2,34 @@
 
 Go binary for updating TLSA DANE record on cloudflare from x509 Certificate
 
-<br>
-
 ## Generate Cloudflare API Token
+
 1. Visit [https://dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
 2. Create Token
 3. "Edit Zone DNS" Template
 4. "Zone Resources" Include > Specific Zone > example.com
 
 ## Installation via Homebrew (MacOS/Linux - x86_64/arm64)
-```
+
+```bash
 brew install stenstromen/tap/gotlsaflare
 ```
 
 ## Download and Run Binary
+
 * For **MacOS** and **Linux**: Checkout and download the latest binary from [Releases page](https://github.com/Stenstromen/gotlsaflare/releases/latest/)
 * For **Windows**: Build the binary yourself.
 
 ## Build and Run Binary
-```
+
+```bash
 go build
 ./gotlsaflare
 ```
 
 ## Example Usage
-```
+
+```bash
 - GoTLSAFlare Example Usage
 
 - Create TLSA Record
@@ -55,17 +58,17 @@ Flags:
 Use "gotlsaflare [command] --help" for more information about a command.
 ```
 
-<br>
-
 # Random Notes
 
 ## Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record
-```
+
+```bash
 openssl x509 -noout -pubkey -in fullchain.pem | openssl rsa -pubin -outform DER 2>/dev/null | sha256sum
 ```
 
 ## POST TLSA UPDATE
-```
+
+```json
 https://api.cloudflare.com/client/v4/zones/:identifier/dns_records
 
 {

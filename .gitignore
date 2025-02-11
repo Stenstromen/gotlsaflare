@@ -1,2 +1,4 @@
 cert.pem
-.env
+ecdsa-cert.pem
+.envrc
+.DS_Store
