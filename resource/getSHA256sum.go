@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
@@ -23,8 +22,8 @@ func getSHA256sum(certfile string) string {
 	}
 	var cert *x509.Certificate
 	cert, _ = x509.ParseCertificate(block.Bytes)
-	rsaPublicKey := cert.PublicKey.(*rsa.PublicKey)
-	keyDER, err := x509.MarshalPKIXPublicKey(rsaPublicKey)
+
+	keyDER, err := x509.MarshalPKIXPublicKey(cert.PublicKey)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
