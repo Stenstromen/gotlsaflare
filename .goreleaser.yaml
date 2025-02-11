@@ -1,3 +1,4 @@
+version: 2
 project_name: gotlsaflare
 builds:
   - env: [CGO_ENABLED=0]
@@ -16,11 +17,11 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
 brews:
   - name: gotlsaflare
-    tap:
+    repository:
       owner: stenstromen
       name: homebrew-tap
     commit_author:
       name: stenstromen
-    folder: Formula
     homepage: https://github.com/Stenstromen/gotlsaflare
     description: Go binary for updating TLSA DANE record on cloudflare from x509 Certificate
+    directory: Formula
