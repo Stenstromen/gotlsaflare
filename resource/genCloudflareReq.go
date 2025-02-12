@@ -7,14 +7,20 @@ import (
 	"time"
 )
 
-func genCloudflareReq(certfile string, port string, protocol string, subdomain string, cu string) string {
+func genCloudflareReq(certfile string, port string, protocol string, subdomain string, cu string, usage int) string {
 	currentTime := time.Now()
 
+	eeHash, caHash := getSHA256sum(certfile)
+	certificate := eeHash
+	if usage == 2 {
+		certificate = caHash
+	}
+
 	data := Data{
-		Usage:        3,
+		Usage:        usage,
 		Selector:     1,
 		Matchingtype: 1,
-		Certificate:  getSHA256sum(certfile),
+		Certificate:  certificate,
 	}
 
 	jsonRequest := JSONRequest{

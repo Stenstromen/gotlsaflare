@@ -36,15 +36,28 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	daneTa, err := cmd.Flags().GetBool("dane-ta")
+	if err != nil {
+		return err
+	}
 
 	if tcp25 {
-		postToCloudflare("_25._tcp.", url, genCloudflareReq(cert, "25", "tcp", subdomain, "Created"))
+		postToCloudflare("_25._tcp.", url, genCloudflareReq(cert, "25", "tcp", subdomain, "Created", 3))
+		if daneTa {
+			postToCloudflare("_25._tcp.", url, genCloudflareReq(cert, "25", "tcp", subdomain, "Created", 2))
+		}
 	}
 	if tcp465 {
-		postToCloudflare("_465._tcp.", url, genCloudflareReq(cert, "465", "tcp", subdomain, "Created"))
+		postToCloudflare("_465._tcp.", url, genCloudflareReq(cert, "465", "tcp", subdomain, "Created", 3))
+		if daneTa {
+			postToCloudflare("_465._tcp.", url, genCloudflareReq(cert, "465", "tcp", subdomain, "Created", 2))
+		}
 	}
 	if tcp587 {
-		postToCloudflare("_587._tcp.", url, genCloudflareReq(cert, "587", "tcp", subdomain, "Created"))
+		postToCloudflare("_587._tcp.", url, genCloudflareReq(cert, "587", "tcp", subdomain, "Created", 3))
+		if daneTa {
+			postToCloudflare("_587._tcp.", url, genCloudflareReq(cert, "587", "tcp", subdomain, "Created", 2))
+		}
 	}
 
 	return nil

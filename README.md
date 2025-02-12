@@ -1,5 +1,20 @@
 # GoTLSAFlare
 
+## Table of Contents
+- [GoTLSAFlare](#gotlsaflare)
+  - [Table of Contents](#table-of-contents)
+  - [Description](#description)
+  - [Generate Cloudflare API Token](#generate-cloudflare-api-token)
+  - [Installation via Homebrew (MacOS/Linux - x86\_64/arm64)](#installation-via-homebrew-macoslinux---x86_64arm64)
+  - [Download and Run Binary](#download-and-run-binary)
+  - [Build and Run Binary](#build-and-run-binary)
+  - [Example Usage](#example-usage)
+- [Random Notes](#random-notes)
+  - [Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record](#generate-dane-ee-publickey-sha256-3-1-1-tlsa-record)
+  - [POST TLSA UPDATE](#post-tlsa-update)
+
+## Description
+
 Go binary for updating TLSA DANE record on cloudflare from x509 Certificate
 
 ## Generate Cloudflare API Token
@@ -30,18 +45,26 @@ go build
 ## Example Usage
 
 ```bash
-- GoTLSAFlare Example Usage
+# GoTLSAFlare Example Usage
 
-- Create TLSA Record
+# Create TLSA Record, DANE-EE (3 1 1)
 export TOKEN="# Cloudflare API TOKEN"
 ./gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem
 
-- Update TLSA Record
+# Update TLSA Record, DANE-EE (3 1 1)
 export TOKEN="# Cloudflare API TOKEN"
 ./gotlsaflare update --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem
 
+# Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)
+export TOKEN="# Cloudflare API TOKEN"
+./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
+
+# Update TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)
+export TOKEN="# Cloudflare API TOKEN"
+./gotlsaflare update --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
+
 Usage of ./gotlsaflare
-Go binary for updating TLSA DANE record on cloudflare from x509 Certificate.
+Go binary for updating TLSA DANE record on Cloudflare from x509 Certificate.
 
 Usage:
   gotlsaflare [command]
@@ -68,9 +91,9 @@ openssl x509 -noout -pubkey -in fullchain.pem | openssl rsa -pubin -outform DER 
 
 ## POST TLSA UPDATE
 
-```json
-https://api.cloudflare.com/client/v4/zones/:identifier/dns_records
+`https://api.cloudflare.com/client/v4/zones/:identifier/dns_records`
 
+```json
 {
     "type":"TLSA",
     "name":"_25._tcp.test",
