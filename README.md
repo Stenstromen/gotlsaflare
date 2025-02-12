@@ -1,9 +1,8 @@
 # GoTLSAFlare
 
-## Table of Contents
+![GoTLSAFlare](./gotlsaflare.webp)
 
 - [GoTLSAFlare](#gotlsaflare)
-  - [Table of Contents](#table-of-contents)
   - [Description](#description)
   - [Generate Cloudflare API Token](#generate-cloudflare-api-token)
   - [Installation via Homebrew (MacOS/Linux - x86\_64/arm64)](#installation-via-homebrew-macoslinux---x86_64arm64)
@@ -46,24 +45,23 @@ go build
 ## Example Usage
 
 ```bash
-# GoTLSAFlare Example Usage
+# Set Cloudflare API TOKEN
+export TOKEN="# Cloudflare API TOKEN"
 
 # Create TLSA Record, DANE-EE (3 1 1)
-export TOKEN="# Cloudflare API TOKEN"
 ./gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem
 
 # Update TLSA Record, DANE-EE (3 1 1)
-export TOKEN="# Cloudflare API TOKEN"
 ./gotlsaflare update --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem
 
 # Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)
-export TOKEN="# Cloudflare API TOKEN"
 ./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
 
 # Update TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)
-export TOKEN="# Cloudflare API TOKEN"
 ./gotlsaflare update --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
+```
 
+```bash
 Usage of ./gotlsaflare
 Go binary for updating TLSA DANE record on Cloudflare from x509 Certificate.
 
