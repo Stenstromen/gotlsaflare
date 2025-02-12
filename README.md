@@ -1,6 +1,7 @@
 # GoTLSAFlare
 
 ## Table of Contents
+
 - [GoTLSAFlare](#gotlsaflare)
   - [Table of Contents](#table-of-contents)
   - [Description](#description)
@@ -9,9 +10,9 @@
   - [Download and Run Binary](#download-and-run-binary)
   - [Build and Run Binary](#build-and-run-binary)
   - [Example Usage](#example-usage)
-- [Random Notes](#random-notes)
-  - [Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record](#generate-dane-ee-publickey-sha256-3-1-1-tlsa-record)
-  - [POST TLSA UPDATE](#post-tlsa-update)
+  - [Random Notes](#random-notes)
+    - [Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record](#generate-dane-ee-publickey-sha256-3-1-1-tlsa-record)
+    - [POST TLSA UPDATE](#post-tlsa-update)
 
 ## Description
 
@@ -32,8 +33,8 @@ brew install stenstromen/tap/gotlsaflare
 
 ## Download and Run Binary
 
-* For **MacOS** and **Linux**: Checkout and download the latest binary from [Releases page](https://github.com/Stenstromen/gotlsaflare/releases/latest/)
-* For **Windows**: Build the binary yourself.
+- For **MacOS** and **Linux**: Checkout and download the latest binary from [Releases page](https://github.com/Stenstromen/gotlsaflare/releases/latest/)
+- For **Windows**: Build the binary yourself.
 
 ## Build and Run Binary
 
@@ -81,15 +82,15 @@ Flags:
 Use "gotlsaflare [command] --help" for more information about a command.
 ```
 
-# Random Notes
+## Random Notes
 
-## Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record
+### Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record
 
 ```bash
 openssl x509 -noout -pubkey -in fullchain.pem | openssl rsa -pubin -outform DER 2>/dev/null | sha256sum
 ```
 
-## POST TLSA UPDATE
+### POST TLSA UPDATE
 
 `https://api.cloudflare.com/client/v4/zones/:identifier/dns_records`
 
