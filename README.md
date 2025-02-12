@@ -9,6 +9,9 @@
   - [Download and Run Binary](#download-and-run-binary)
   - [Build and Run Binary](#build-and-run-binary)
   - [Example Usage](#example-usage)
+  - [Practical Usage](#practical-usage)
+    - [Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)](#create-tlsa-record-dane-ee-3-1-1-and-dane-ta-2-1-1)
+    - [LetsEncrypt Certbot renewal hook](#letsencrypt-certbot-renewal-hook)
   - [Random Notes](#random-notes)
     - [Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record](#generate-dane-ee-publickey-sha256-3-1-1-tlsa-record)
     - [POST TLSA UPDATE](#post-tlsa-update)
@@ -78,6 +81,28 @@ Flags:
   -h, --help   help for gotlsaflare
 
 Use "gotlsaflare [command] --help" for more information about a command.
+```
+
+## Practical Usage
+
+### Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)
+
+```bash
+export TOKEN="# Cloudflare API TOKEN"
+gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
+```
+
+### LetsEncrypt Certbot renewal hook
+
+```bash
+# Update TLSA Record, DANE-EE (3 1 1)
+echo "TOKEN='Cloudflare API TOKEN' gotlsaflare update --url example.com --subdomain email --tcp25 --cert path/to/fullchain.pem" >> /etc/letsencrypt/renewal-hooks/post/update-tlsa.sh
+
+# Make script executable
+chmod +x /etc/letsencrypt/renewal-hooks/post/update-tlsa.sh
+
+# Restart Certbot service
+systemctl restart certbot.service
 ```
 
 ## Random Notes
