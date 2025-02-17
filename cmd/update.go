@@ -16,4 +16,5 @@ var updateCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(updateCmd)
 	addCommonFlags(updateCmd)
+	updateCmd.Flags().Bool("rollover", false, "Perform rolling update of TLSA records")
 }

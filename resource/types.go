@@ -125,3 +125,32 @@ type RecordsRes struct {
 		TotalPages int `json:"total_pages"`
 	} `json:"result_info"`
 }
+
+type DNSRecord = struct {
+	ID        string `json:"id"`
+	ZoneID    string `json:"zone_id"`
+	ZoneName  string `json:"zone_name"`
+	Name      string `json:"name"`
+	Type      string `json:"type"`
+	Content   string `json:"content"`
+	Proxiable bool   `json:"proxiable"`
+	Proxied   bool   `json:"proxied"`
+	TTL       int    `json:"ttl"`
+	Locked    bool   `json:"locked"`
+	Data      struct {
+		Certificate  string `json:"certificate"`
+		MatchingType int    `json:"matching_type"`
+		Selector     int    `json:"selector"`
+		Usage        int    `json:"usage"`
+	} `json:"data"`
+	Meta struct {
+		AutoAdded           bool   `json:"auto_added"`
+		ManagedByApps       bool   `json:"managed_by_apps"`
+		ManagedByArgoTunnel bool   `json:"managed_by_argo_tunnel"`
+		Source              string `json:"source"`
+	} `json:"meta"`
+	Comment    string        `json:"comment"`
+	Tags       []interface{} `json:"tags"`
+	CreatedOn  time.Time     `json:"created_on"`
+	ModifiedOn time.Time     `json:"modified_on"`
+}

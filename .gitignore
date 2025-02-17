@@ -1,4 +1,5 @@
-cert.pem
-ecdsa-cert.pem
+*.pem
+*.crt
+*.key
 .envrc
 .DS_Store
