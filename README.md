@@ -12,6 +12,7 @@
   - [Practical Usage](#practical-usage)
     - [Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)](#create-tlsa-record-dane-ee-3-1-1-and-dane-ta-2-1-1)
     - [LetsEncrypt Certbot renewal hook](#letsencrypt-certbot-renewal-hook)
+    - [LetsEncrypt Certbot renewal hook with rolling update](#letsencrypt-certbot-renewal-hook-with-rolling-update)
   - [Random Notes](#random-notes)
     - [Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record](#generate-dane-ee-publickey-sha256-3-1-1-tlsa-record)
     - [POST TLSA UPDATE](#post-tlsa-update)
@@ -62,6 +63,9 @@ export TOKEN="# Cloudflare API TOKEN"
 
 # Update TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)
 ./gotlsaflare update --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
+
+# Update TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1) with rolling update (keeps old record for TTL seconds, then deletes it)
+./gotlsaflare update --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem --rollover
 ```
 
 ```bash
@@ -97,6 +101,25 @@ gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert 
 ```bash
 # Update TLSA Record, DANE-EE (3 1 1)
 echo "TOKEN='Cloudflare API TOKEN' gotlsaflare update --url example.com --subdomain email --tcp25 --cert path/to/fullchain.pem" >> /etc/letsencrypt/renewal-hooks/post/update-tlsa.sh
+
+# Restart Postfix service
+echo 'systemctl restart postfix.service' >> /etc/letsencrypt/renewal-hooks/post/update-tlsa.sh
+
+# Make script executable
+chmod +x /etc/letsencrypt/renewal-hooks/post/update-tlsa.sh
+
+# Restart Certbot service
+systemctl restart certbot.service
+```
+
+### LetsEncrypt Certbot renewal hook with rolling update
+
+```bash
+# Update TLSA Record, DANE-EE (3 1 1)  with rolling update
+echo "TOKEN='Cloudflare API TOKEN' gotlsaflare update --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem --rollover" >> /etc/letsencrypt/renewal-hooks/post/update-tlsa.sh
+
+# Restart Postfix service
+echo 'systemctl restart postfix.service' >> /etc/letsencrypt/renewal-hooks/post/update-tlsa.sh
 
 # Make script executable
 chmod +x /etc/letsencrypt/renewal-hooks/post/update-tlsa.sh

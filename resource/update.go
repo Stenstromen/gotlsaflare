@@ -3,10 +3,12 @@ package resource
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -40,9 +42,17 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	rollover, err := cmd.Flags().GetBool("rollover")
+	if err != nil {
+		return err
+	}
 
 	if tcp25 {
-		putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3))
+		if rollover {
+			performRollover("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3))
+		} else {
+			putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3))
+		}
 		if daneTa {
 			putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 2))
 		}
@@ -147,4 +157,153 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 	defer resp.Body.Close()
 
 	log.Println("Cloudflare Response Status:", resp3.Status)
+}
+
+func performRollover(portandprotocol string, nameanddomain string, putBody string) {
+	url := "https://api.cloudflare.com/client/v4/zones"
+	bearer := "Bearer " + os.Getenv("TOKEN")
+
+	// Get zone ID and old record first
+	zoneID, oldRecord := getExistingRecord(url, bearer, portandprotocol, nameanddomain)
+
+	if zoneID == "" {
+		log.Println("Error: Could not find zone ID")
+		return
+	}
+
+	// Store old record details
+	oldRecordID := ""
+	if oldRecord != nil {
+		oldRecordID = oldRecord.ID
+	} else {
+		putToCloudflare(portandprotocol, nameanddomain, putBody)
+		return
+	}
+
+	// Create new record first
+	createURL := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records", zoneID)
+	jsonStr := []byte(putBody)
+	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		log.Printf("Error creating request: %v\n", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Add("Authorization", bearer)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error creating new record: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		log.Printf("Error creating new record. Status: %s\n", resp.Status)
+		return
+	}
+
+	ttl := time.Duration(oldRecord.TTL) * time.Second
+	if ttl == 0 {
+		ttl = 3600 * time.Second // Default to 1 hour if TTL is 0
+	}
+
+	// Create a channel to signal completion
+	done := make(chan bool)
+
+	go func() {
+		time.Sleep(ttl)
+		if err := deleteRecord(zoneID, oldRecordID, bearer); err != nil {
+			log.Printf("Error deleting old record: %v\n", err)
+		}
+		done <- true
+	}()
+
+	log.Printf("Created new TLSA record. Old record will be deleted in %.0f seconds\n", ttl.Seconds())
+
+	// Wait for deletion to complete
+	<-done
+}
+
+func deleteRecord(zoneID, recordID, bearer string) error {
+	if zoneID == "" || recordID == "" {
+		return fmt.Errorf("invalid zoneID or recordID")
+	}
+
+	deleteURL := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records/%s", zoneID, recordID)
+	req, err := http.NewRequest("DELETE", deleteURL, nil)
+	if err != nil {
+		return fmt.Errorf("error creating delete request: %v", err)
+	}
+
+	req.Header.Add("Authorization", bearer)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error deleting record: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("delete request failed with status: %s", resp.Status)
+	}
+
+	log.Printf("Deleted old TLSA record. Status: %s\n", resp.Status)
+	return nil
+}
+
+func getExistingRecord(url, bearer, portandprotocol, nameanddomain string) (string, *DNSRecord) {
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", bearer)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error getting zone info: %v\n", err)
+		return "", nil
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var res Res
+	if err := json.Unmarshal(body, &res); err != nil {
+		log.Printf("Error parsing zone response: %v\n", err)
+		return "", nil
+	}
+
+	if len(res.Result) == 0 {
+		log.Println("No zones found")
+		return "", nil
+	}
+
+	zoneID := res.Result[0].ID
+
+	recordsURL := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records", zoneID)
+	req2, _ := http.NewRequest("GET", recordsURL, nil)
+	req2.Header.Add("Authorization", bearer)
+
+	resp2, err := client.Do(req2)
+	if err != nil {
+		log.Printf("Error getting DNS records: %v\n", err)
+		return zoneID, nil
+	}
+	defer resp2.Body.Close()
+
+	body2, _ := io.ReadAll(resp2.Body)
+	var recordsRes RecordsRes
+	if err := json.Unmarshal(body2, &recordsRes); err != nil {
+		log.Printf("Error parsing records response: %v\n", err)
+		return zoneID, nil
+	}
+
+	for _, record := range recordsRes.Result {
+		if record.Type == "TLSA" && record.Name == portandprotocol+nameanddomain {
+			return zoneID, &record
+		}
+	}
+
+	return zoneID, nil
 }

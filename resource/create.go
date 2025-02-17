@@ -2,8 +2,6 @@ package resource
 
 import (
 	"bytes"
-	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -63,42 +61,25 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func postToCloudflare(_ string, nameanddomain string, postBody string) {
+func postToCloudflare(portandprotocol string, nameanddomain string, postBody string) {
 	url := "https://api.cloudflare.com/client/v4/zones"
-	var bearer = "Bearer " + os.Getenv("TOKEN")
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Println(err)
+	bearer := "Bearer " + os.Getenv("TOKEN")
+
+	// First check if record exists
+	zoneID, existingRecord := getExistingRecord(url, bearer, portandprotocol, nameanddomain)
+
+	if existingRecord != nil {
+		log.Printf("Error: TLSA record already exists for %s%s\n", portandprotocol, nameanddomain)
 		os.Exit(1)
 	}
 
-	req.Header.Add("Authorization", bearer)
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println("Error on response.\n[ERROR] -", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println("Error while reading the response bytes:", err)
-	}
-	var res Res
-	if err := json.Unmarshal(body, &res); err != nil {
-		log.Println(err)
+	if zoneID == "" {
+		log.Println("Error: Could not find zone ID")
 		os.Exit(1)
 	}
 
-	var did string
+	posturl := "https://api.cloudflare.com/client/v4/zones/" + zoneID + "/dns_records"
 
-	for i := range res.Result {
-		if nameanddomain == res.Result[i].Name {
-			did = res.Result[i].ID
-		}
-	}
-
-	posturl := "https://api.cloudflare.com/client/v4/zones/" + did + "/dns_records"
 	var jsonStr = []byte(postBody)
 	req2, err2 := http.NewRequest("POST", posturl, bytes.NewBuffer(jsonStr))
 	if err2 != nil {
@@ -115,7 +96,7 @@ func postToCloudflare(_ string, nameanddomain string, postBody string) {
 		log.Println(err2)
 		os.Exit(1)
 	}
-	defer resp.Body.Close()
+	defer resp2.Body.Close()
 
 	log.Println("Cloudflare Response Status:", resp2.Status)
 }
