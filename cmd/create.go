@@ -20,6 +20,7 @@ func addCommonFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("tcp25", "t", true, "Port 25/TCP")
 	cmd.Flags().BoolP("tcp465", "p", false, "Port 465/TCP")
 	cmd.Flags().BoolP("tcp587", "e", false, "Port 587/TCP")
+	cmd.Flags().IntP("custom-port", "c", 0, "Custom TCP Port")
 	cmd.Flags().BoolP("dane-ta", "", false, "Create DANE-TA (2 1 1) record")
 	cmd.MarkFlagRequired("url")
 	cmd.MarkFlagRequired("subdomain")
