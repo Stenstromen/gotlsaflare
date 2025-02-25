@@ -66,6 +66,12 @@ export TOKEN="# Cloudflare API TOKEN"
 
 # Update TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1) with rolling update (keeps old record for TTL seconds, then deletes it)
 ./gotlsaflare update --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem --rollover
+
+# Create TLSA Record with selector 0 (DANE-EE 3 0 1, full certificate)
+./gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem --selector 0
+
+# Create TLSA Record with selector 0 (DANE-EE 3 0 1 and DANE-TA 2 0 1, full certificate)
+./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/certificate.pem --selector 0
 ```
 
 ```bash

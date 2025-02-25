@@ -46,27 +46,39 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	selector, err := cmd.Flags().GetInt("selector")
+	if err != nil {
+		return err
+	}
 
 	if tcp25 {
 		if rollover {
-			performRollover("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3))
+			performRollover("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3, selector))
 		} else {
-			putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3))
+			putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3, selector))
 		}
 		if daneTa {
-			putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 2))
+			putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 2, selector))
 		}
 	}
 	if tcp465 {
-		putToCloudflare("_465._tcp.", subdomain+"."+url, genCloudflareReq(cert, "465", "tcp", subdomain, "Updated", 3))
+		if rollover {
+			performRollover("_465._tcp.", subdomain+"."+url, genCloudflareReq(cert, "465", "tcp", subdomain, "Updated", 3, selector))
+		} else {
+			putToCloudflare("_465._tcp.", subdomain+"."+url, genCloudflareReq(cert, "465", "tcp", subdomain, "Updated", 3, selector))
+		}
 		if daneTa {
-			putToCloudflare("_465._tcp.", subdomain+"."+url, genCloudflareReq(cert, "465", "tcp", subdomain, "Updated", 2))
+			putToCloudflare("_465._tcp.", subdomain+"."+url, genCloudflareReq(cert, "465", "tcp", subdomain, "Updated", 2, selector))
 		}
 	}
 	if tcp587 {
-		putToCloudflare("_587._tcp.", subdomain+"."+url, genCloudflareReq(cert, "587", "tcp", subdomain, "Updated", 3))
+		if rollover {
+			performRollover("_587._tcp.", subdomain+"."+url, genCloudflareReq(cert, "587", "tcp", subdomain, "Updated", 3, selector))
+		} else {
+			putToCloudflare("_587._tcp.", subdomain+"."+url, genCloudflareReq(cert, "587", "tcp", subdomain, "Updated", 3, selector))
+		}
 		if daneTa {
-			putToCloudflare("_587._tcp.", subdomain+"."+url, genCloudflareReq(cert, "587", "tcp", subdomain, "Updated", 2))
+			putToCloudflare("_587._tcp.", subdomain+"."+url, genCloudflareReq(cert, "587", "tcp", subdomain, "Updated", 2, selector))
 		}
 	}
 

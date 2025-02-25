@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func getSHA256sum(certfile string) (string, string) {
+func getSHA256sum(certfile string, selector int) (string, string) {
 	pemContent, err := os.ReadFile(certfile)
 	if err != nil {
 		log.Println(err)
@@ -23,10 +23,19 @@ func getSHA256sum(certfile string) (string, string) {
 		os.Exit(1)
 	}
 	eeCert, _ := x509.ParseCertificate(block.Bytes)
-	eeHash := getPublicKeySHA256(eeCert)
+	var eeHash string
+	if selector == 0 {
+		// Hash the entire certificate
+		sum := sha256.Sum256(block.Bytes)
+		eeHash = hex.EncodeToString(sum[:])
+	} else {
+		// Hash just the public key (existing functionality)
+		eeHash = getPublicKeySHA256(eeCert)
+	}
 
 	// Get CA certificate (last in chain)
 	var caCert *x509.Certificate
+	var caHash string
 	for len(rest) > 0 {
 		block, rest = pem.Decode(rest)
 		if block == nil {
@@ -35,9 +44,15 @@ func getSHA256sum(certfile string) (string, string) {
 		caCert, _ = x509.ParseCertificate(block.Bytes)
 	}
 
-	var caHash string
 	if caCert != nil {
-		caHash = getPublicKeySHA256(caCert)
+		if selector == 0 {
+			// Hash the entire CA certificate
+			sum := sha256.Sum256(block.Bytes)
+			caHash = hex.EncodeToString(sum[:])
+		} else {
+			// Hash just the public key (existing functionality)
+			caHash = getPublicKeySHA256(caCert)
+		}
 	}
 
 	return eeHash, caHash
