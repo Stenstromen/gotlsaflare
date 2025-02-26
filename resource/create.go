@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -34,11 +35,24 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	tcpPort, err := cmd.Flags().GetInt("tcp-port")
+	if err != nil {
+		return err
+	}
+
 	daneTa, err := cmd.Flags().GetBool("dane-ta")
 	if err != nil {
 		return err
 	}
 
+	if tcpPort != 0 {
+		port := strconv.Itoa(tcpPort)
+		postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 3))
+		if daneTa {
+			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 2))
+		}
+	}
 	if tcp25 {
 		postToCloudflare("_25._tcp.", url, genCloudflareReq(cert, "25", "tcp", subdomain, "Created", 3))
 		if daneTa {
