@@ -69,6 +69,12 @@ export TOKEN="# Cloudflare API TOKEN"
 
 # Update TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1) with custom TCP port
 ./gotlsaflare update --url example.com --subdomain www --tcp-port 443 --dane-ta --cert path/to/fullchain.pem
+
+# Create TLSA Record with selector 0 (DANE-EE 3 0 1, full certificate)
+./gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem --selector 0
+
+# Create TLSA Record with selector 0 (DANE-EE 3 0 1 and DANE-TA 2 0 1, full certificate)
+./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/certificate.pem --selector 0
 ```
 
 ```bash
