@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -42,11 +43,26 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	tcpPort, err := cmd.Flags().GetInt("tcp-port")
+	if err != nil {
+		return err
+	}
 	rollover, err := cmd.Flags().GetBool("rollover")
 	if err != nil {
 		return err
 	}
 
+	if tcpPort != 0 {
+		port := strconv.Itoa(tcpPort)
+		if rollover {
+			performRollover("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3))
+		} else {
+			putToCloudflare("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3))
+		}
+		if daneTa {
+			putToCloudflare("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2))
+		}
+	}
 	if tcp25 {
 		if rollover {
 			performRollover("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3))
