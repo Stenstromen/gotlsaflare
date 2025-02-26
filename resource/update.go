@@ -59,12 +59,12 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 	if tcpPort != 0 {
 		port := strconv.Itoa(tcpPort)
 		if rollover {
-			performRollover("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3))
+			performRollover("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, selector))
 		} else {
-			putToCloudflare("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3))
+			putToCloudflare("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, selector))
 		}
 		if daneTa {
-			putToCloudflare("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2))
+			putToCloudflare("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2, selector))
 		}
 	}
 	if tcp25 {

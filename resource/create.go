@@ -52,9 +52,9 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 
 	if tcpPort != 0 {
 		port := strconv.Itoa(tcpPort)
-		postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 3))
+		postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 3, selector))
 		if daneTa {
-			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 2))
+			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 2, selector))
 		}
 	}
 	if tcp25 {
