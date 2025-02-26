@@ -56,46 +56,34 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if tcpPort != 0 {
-		port := strconv.Itoa(tcpPort)
+	handlePortUpdate := func(port string) {
+		prefix := "_" + port + "._tcp."
+		domain := subdomain + "." + url
+		req := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, selector)
+
 		if rollover {
-			performRollover("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, selector))
+			performRollover(prefix, domain, req)
 		} else {
-			putToCloudflare("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, selector))
+			putToCloudflare(prefix, domain, req)
 		}
+
 		if daneTa {
-			putToCloudflare("_"+port+"._tcp.", subdomain+"."+url, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2, selector))
+			putToCloudflare(prefix, domain, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2, selector))
 		}
 	}
+
+	if tcpPort != 0 {
+		handlePortUpdate(strconv.Itoa(tcpPort))
+	}
+
 	if tcp25 {
-		if rollover {
-			performRollover("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3, selector))
-		} else {
-			putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 3, selector))
-		}
-		if daneTa {
-			putToCloudflare("_25._tcp.", subdomain+"."+url, genCloudflareReq(cert, "25", "tcp", subdomain, "Updated", 2, selector))
-		}
+		handlePortUpdate("25")
 	}
 	if tcp465 {
-		if rollover {
-			performRollover("_465._tcp.", subdomain+"."+url, genCloudflareReq(cert, "465", "tcp", subdomain, "Updated", 3, selector))
-		} else {
-			putToCloudflare("_465._tcp.", subdomain+"."+url, genCloudflareReq(cert, "465", "tcp", subdomain, "Updated", 3, selector))
-		}
-		if daneTa {
-			putToCloudflare("_465._tcp.", subdomain+"."+url, genCloudflareReq(cert, "465", "tcp", subdomain, "Updated", 2, selector))
-		}
+		handlePortUpdate("465")
 	}
 	if tcp587 {
-		if rollover {
-			performRollover("_587._tcp.", subdomain+"."+url, genCloudflareReq(cert, "587", "tcp", subdomain, "Updated", 3, selector))
-		} else {
-			putToCloudflare("_587._tcp.", subdomain+"."+url, genCloudflareReq(cert, "587", "tcp", subdomain, "Updated", 3, selector))
-		}
-		if daneTa {
-			putToCloudflare("_587._tcp.", subdomain+"."+url, genCloudflareReq(cert, "587", "tcp", subdomain, "Updated", 2, selector))
-		}
+		handlePortUpdate("587")
 	}
 
 	return nil
