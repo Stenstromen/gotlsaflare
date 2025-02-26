@@ -50,30 +50,25 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if tcpPort != 0 {
-		port := strconv.Itoa(tcpPort)
+	createTLSARecords := func(port string) {
 		postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 3, selector))
 		if daneTa {
 			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 2, selector))
 		}
 	}
+
+	if tcpPort != 0 {
+		createTLSARecords(strconv.Itoa(tcpPort))
+	}
+
 	if tcp25 {
-		postToCloudflare("_25._tcp.", url, genCloudflareReq(cert, "25", "tcp", subdomain, "Created", 3, selector))
-		if daneTa {
-			postToCloudflare("_25._tcp.", url, genCloudflareReq(cert, "25", "tcp", subdomain, "Created", 2, selector))
-		}
+		createTLSARecords("25")
 	}
 	if tcp465 {
-		postToCloudflare("_465._tcp.", url, genCloudflareReq(cert, "465", "tcp", subdomain, "Created", 3, selector))
-		if daneTa {
-			postToCloudflare("_465._tcp.", url, genCloudflareReq(cert, "465", "tcp", subdomain, "Created", 2, selector))
-		}
+		createTLSARecords("465")
 	}
 	if tcp587 {
-		postToCloudflare("_587._tcp.", url, genCloudflareReq(cert, "587", "tcp", subdomain, "Created", 3, selector))
-		if daneTa {
-			postToCloudflare("_587._tcp.", url, genCloudflareReq(cert, "587", "tcp", subdomain, "Created", 2, selector))
-		}
+		createTLSARecords("587")
 	}
 
 	return nil
