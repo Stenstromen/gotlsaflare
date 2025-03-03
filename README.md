@@ -15,6 +15,7 @@
     - [LetsEncrypt Certbot renewal hook with rolling update](#letsencrypt-certbot-renewal-hook-with-rolling-update)
   - [Random Notes](#random-notes)
     - [Generate DANE-EE Publickey SHA256 (3 1 1) TLSA Record](#generate-dane-ee-publickey-sha256-3-1-1-tlsa-record)
+    - [Generate DANE-EE Publickey SHA512 (3 1 2) TLSA Record](#generate-dane-ee-publickey-sha512-3-1-2-tlsa-record)
     - [POST TLSA UPDATE](#post-tlsa-update)
 
 ## Description
@@ -81,6 +82,12 @@ export TOKEN="# Cloudflare API TOKEN"
 
 # Create TLSA Record with explicit selector for both DANE-EE and DANE-TA (overrides defaults)
 ./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/certificate.pem --selector 0
+
+# Create TLSA Record with SHA2-512 matching type (default is SHA2-256)
+./gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem --matching-type 2
+
+# Create TLSA Record with SHA2-512 matching type for both DANE-EE and DANE-TA
+./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/certificate.pem --matching-type 2
 ```
 
 ```bash
@@ -125,6 +132,20 @@ export TOKEN="# Cloudflare API TOKEN"
 gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem
 ```
 
+### Create TLSA Record with SHA2-512 matching type
+
+```bash
+export TOKEN="# Cloudflare API TOKEN"
+gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem --matching-type 2
+```
+
+### Create TLSA Record with SHA2-512 matching type for both DANE-EE and DANE-TA
+
+```bash
+export TOKEN="# Cloudflare API TOKEN"
+gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem --matching-type 2
+```
+
 ### LetsEncrypt Certbot renewal hook
 
 ```bash
@@ -165,6 +186,12 @@ systemctl restart certbot.service
 openssl x509 -noout -pubkey -in fullchain.pem | openssl rsa -pubin -outform DER 2>/dev/null | sha256sum
 ```
 
+### Generate DANE-EE Publickey SHA512 (3 1 2) TLSA Record
+
+```bash
+openssl x509 -noout -pubkey -in fullchain.pem | openssl rsa -pubin -outform DER 2>/dev/null | sha512sum
+```
+
 ### POST TLSA UPDATE
 
 `https://api.cloudflare.com/client/v4/zones/:identifier/dns_records`
@@ -179,6 +206,26 @@ openssl x509 -noout -pubkey -in fullchain.pem | openssl rsa -pubin -outform DER 
         "selector":1,
         "matching_type":1,
         "certificate":"SHA256SUM"
+        },
+    "ttl":3600,
+    "priority":10,
+    "proxied":false,
+    "comment":"This is a comment"
+}
+```
+
+Example with SHA2-512:
+
+```json
+{
+    "type":"TLSA",
+    "name":"_25._tcp.test",
+    "data":
+        {
+        "usage":3,
+        "selector":1,
+        "matching_type":2,
+        "certificate":"SHA512SUM"
         },
     "ttl":3600,
     "priority":10,

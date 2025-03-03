@@ -70,6 +70,11 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	matchingType, err := cmd.Flags().GetInt("matching-type")
+	if err != nil {
+		return err
+	}
+
 	// Handle the case where both --dane-ee and --no-dane-ee are specified
 	if noDaneEE {
 		daneEE = false
@@ -78,6 +83,12 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 	// Ensure at least one of DANE-EE or DANE-TA is enabled
 	if !daneEE && !daneTa {
 		log.Println("Error: At least one of DANE-EE or DANE-TA must be enabled")
+		os.Exit(1)
+	}
+
+	// Validate matching type
+	if matchingType != 1 && matchingType != 2 {
+		log.Println("Error: Matching type must be either 1 (SHA2-256) or 2 (SHA2-512)")
 		os.Exit(1)
 	}
 
@@ -96,7 +107,7 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 		}
 
 		if daneEE {
-			eeReq := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, eeSel)
+			eeReq := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, eeSel, matchingType)
 			if rollover {
 				performRollover(prefix, domain, eeReq)
 			} else {
@@ -105,7 +116,7 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 		}
 
 		if daneTa {
-			taReq := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2, taSel)
+			taReq := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2, taSel, matchingType)
 			if rollover && !daneEE {
 				// Only use rollover for DANE-TA if DANE-EE is not enabled
 				performRollover(prefix, domain, taReq)

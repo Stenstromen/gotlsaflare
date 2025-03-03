@@ -61,6 +61,11 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	matchingType, err := cmd.Flags().GetInt("matching-type")
+	if err != nil {
+		return err
+	}
+
 	// Handle the case where both --dane-ee and --no-dane-ee are specified
 	if noDaneEE {
 		daneEE = false
@@ -69,6 +74,12 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 	// Ensure at least one of DANE-EE or DANE-TA is enabled
 	if !daneEE && !daneTa {
 		log.Println("Error: At least one of DANE-EE or DANE-TA must be enabled")
+		os.Exit(1)
+	}
+
+	// Validate matching type
+	if matchingType != 1 && matchingType != 2 {
+		log.Println("Error: Matching type must be either 1 (SHA2-256) or 2 (SHA2-512)")
 		os.Exit(1)
 	}
 
@@ -84,11 +95,11 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 		}
 
 		if daneEE {
-			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 3, eeSel))
+			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 3, eeSel, matchingType))
 		}
 
 		if daneTa {
-			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 2, taSel))
+			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 2, taSel, matchingType))
 		}
 	}
 

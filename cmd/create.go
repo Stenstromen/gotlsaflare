@@ -25,6 +25,7 @@ func addCommonFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("no-dane-ee", "", false, "Do not create DANE-EE record (use with --dane-ta)")
 	cmd.Flags().BoolP("dane-ta", "", false, "Create DANE-TA (2 0 1) record")
 	cmd.Flags().IntP("selector", "l", -1, "TLSA selector (0 = Full cert, 1 = SubjectPublicKeyInfo). If not specified, defaults to 1 for DANE-EE and 0 for DANE-TA")
+	cmd.Flags().IntP("matching-type", "m", 1, "TLSA matching type (1 = SHA2-256, 2 = SHA2-512)")
 	cmd.MarkFlagRequired("url")
 	cmd.MarkFlagRequired("subdomain")
 	cmd.MarkFlagRequired("cert")
