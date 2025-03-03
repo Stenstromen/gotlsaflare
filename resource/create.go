@@ -113,10 +113,11 @@ func postToCloudflare(portandprotocol string, nameanddomain string, postBody str
 	url := "https://api.cloudflare.com/client/v4/zones"
 	bearer := "Bearer " + os.Getenv("TOKEN")
 
-	// First check if record exists
-	zoneID, existingRecord := getExistingRecord(url, bearer, portandprotocol, nameanddomain)
+	// First check if record exists with either usage type (2 for DANE-TA or 3 for DANE-EE)
+	zoneID, existingRecordEE := getExistingRecord(url, bearer, portandprotocol, nameanddomain, 3)
+	_, existingRecordTA := getExistingRecord(url, bearer, portandprotocol, nameanddomain, 2)
 
-	if existingRecord != nil {
+	if existingRecordEE != nil || existingRecordTA != nil {
 		log.Printf("Error: TLSA record already exists for %s%s\n", portandprotocol, nameanddomain)
 		os.Exit(1)
 	}

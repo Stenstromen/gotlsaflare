@@ -135,6 +135,15 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 func putToCloudflare(portandprotocol string, nameanddomain string, putBody string) {
 	url := "https://api.cloudflare.com/client/v4/zones"
 	var bearer = "Bearer " + os.Getenv("TOKEN")
+
+	// Extract usage value from putBody
+	var jsonReq JSONRequest
+	if err := json.Unmarshal([]byte(putBody), &jsonReq); err != nil {
+		log.Printf("Error parsing request body: %v\n", err)
+		return
+	}
+	usage := jsonReq.Data.Usage
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println(err)
@@ -189,10 +198,18 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 	var did string
 
 	for i := range recordsres.Result {
-		if portandprotocol+nameanddomain == recordsres.Result[i].Name {
+		if portandprotocol+nameanddomain == recordsres.Result[i].Name &&
+			recordsres.Result[i].Type == "TLSA" &&
+			recordsres.Result[i].Data.Usage == usage {
 			did = recordsres.Result[i].ID
-
+			break
 		}
+	}
+
+	if did == "" {
+		log.Printf("Error: Could not find existing TLSA record with usage %d for %s%s\n",
+			usage, portandprotocol, nameanddomain)
+		os.Exit(1)
 	}
 
 	puturl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records/" + did
@@ -222,8 +239,16 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 	url := "https://api.cloudflare.com/client/v4/zones"
 	bearer := "Bearer " + os.Getenv("TOKEN")
 
-	// Get zone ID and old record first
-	zoneID, oldRecord := getExistingRecord(url, bearer, portandprotocol, nameanddomain)
+	// Extract usage value from putBody
+	var jsonReq JSONRequest
+	if err := json.Unmarshal([]byte(putBody), &jsonReq); err != nil {
+		log.Printf("Error parsing request body: %v\n", err)
+		return
+	}
+	usage := jsonReq.Data.Usage
+
+	// Get zone ID and old record first with the correct usage value
+	zoneID, oldRecord := getExistingRecord(url, bearer, portandprotocol, nameanddomain, usage)
 
 	if zoneID == "" {
 		log.Println("Error: Could not find zone ID")
@@ -314,7 +339,7 @@ func deleteRecord(zoneID, recordID, bearer string) error {
 	return nil
 }
 
-func getExistingRecord(url, bearer, portandprotocol, nameanddomain string) (string, *DNSRecord) {
+func getExistingRecord(url, bearer, portandprotocol, nameanddomain string, usage int) (string, *DNSRecord) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", bearer)
 
@@ -359,7 +384,7 @@ func getExistingRecord(url, bearer, portandprotocol, nameanddomain string) (stri
 	}
 
 	for _, record := range recordsRes.Result {
-		if record.Type == "TLSA" && record.Name == portandprotocol+nameanddomain {
+		if record.Type == "TLSA" && record.Name == portandprotocol+nameanddomain && record.Data.Usage == usage {
 			return zoneID, &record
 		}
 	}
