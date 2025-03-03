@@ -41,19 +41,54 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	daneEE, err := cmd.Flags().GetBool("dane-ee")
+	if err != nil {
+		return err
+	}
+
+	noDaneEE, err := cmd.Flags().GetBool("no-dane-ee")
+	if err != nil {
+		return err
+	}
+
 	daneTa, err := cmd.Flags().GetBool("dane-ta")
 	if err != nil {
 		return err
 	}
+
 	selector, err := cmd.Flags().GetInt("selector")
 	if err != nil {
 		return err
 	}
 
+	// Handle the case where both --dane-ee and --no-dane-ee are specified
+	if noDaneEE {
+		daneEE = false
+	}
+
+	// Ensure at least one of DANE-EE or DANE-TA is enabled
+	if !daneEE && !daneTa {
+		log.Println("Error: At least one of DANE-EE or DANE-TA must be enabled")
+		os.Exit(1)
+	}
+
 	createTLSARecords := func(port string) {
-		postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 3, selector))
+		// Use appropriate selectors for each usage type if not explicitly specified
+		eeSel := selector
+		taSel := selector
+
+		// If selector is not explicitly set (-1), use defaults
+		if selector == -1 {
+			eeSel = 1 // Default to SPKI(1) for DANE-EE
+			taSel = 0 // Default to Cert(0) for DANE-TA
+		}
+
+		if daneEE {
+			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 3, eeSel))
+		}
+
 		if daneTa {
-			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 2, selector))
+			postToCloudflare("_"+port+"._tcp.", url, genCloudflareReq(cert, port, "tcp", subdomain, "Created", 2, taSel))
 		}
 	}
 

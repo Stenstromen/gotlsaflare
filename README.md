@@ -58,22 +58,28 @@ export TOKEN="# Cloudflare API TOKEN"
 # Update TLSA Record, DANE-EE (3 1 1)
 ./gotlsaflare update --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem
 
-# Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)
+# Create TLSA Record, DANE-TA (2 0 1) only
+./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --no-dane-ee --cert path/to/fullchain.pem
+
+# Create TLSA Record, both DANE-EE (3 1 1) and DANE-TA (2 0 1)
 ./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
 
-# Update TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)
+# Create TLSA Record, DANE-EE (3 1 1) only (default)
+./gotlsaflare create --url example.com --subdomain email --tcp25 --no-dane-ta --cert path/to/certificate.pem
+
+# Update TLSA Record, both DANE-EE (3 1 1) and DANE-TA (2 0 1)
 ./gotlsaflare update --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
 
-# Update TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1) with rolling update (keeps old record for TTL seconds, then deletes it)
+# Update TLSA Record, both DANE-EE (3 1 1) and DANE-TA (2 0 1) with rolling update (keeps old record for TTL seconds, then deletes it)
 ./gotlsaflare update --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem --rollover
 
-# Update TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1) with custom TCP port
+# Update TLSA Record, both DANE-EE (3 1 1) and DANE-TA (2 0 1) with custom TCP port
 ./gotlsaflare update --url example.com --subdomain www --tcp-port 443 --dane-ta --cert path/to/fullchain.pem
 
-# Create TLSA Record with selector 0 (DANE-EE 3 0 1, full certificate)
+# Create TLSA Record with explicit selector (overrides defaults)
 ./gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem --selector 0
 
-# Create TLSA Record with selector 0 (DANE-EE 3 0 1 and DANE-TA 2 0 1, full certificate)
+# Create TLSA Record with explicit selector for both DANE-EE and DANE-TA (overrides defaults)
 ./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/certificate.pem --selector 0
 ```
 
@@ -98,11 +104,25 @@ Use "gotlsaflare [command] --help" for more information about a command.
 
 ## Practical Usage
 
-### Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)
+### Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 0 1)
 
 ```bash
 export TOKEN="# Cloudflare API TOKEN"
 gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
+```
+
+### Create TLSA Record, DANE-TA (2 0 1) only
+
+```bash
+export TOKEN="# Cloudflare API TOKEN"
+gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --no-dane-ee --cert path/to/fullchain.pem
+```
+
+### Create TLSA Record, DANE-EE (3 1 1) only (default)
+
+```bash
+export TOKEN="# Cloudflare API TOKEN"
+gotlsaflare create --url example.com --subdomain email --tcp25 --cert path/to/certificate.pem
 ```
 
 ### LetsEncrypt Certbot renewal hook

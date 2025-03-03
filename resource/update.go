@@ -39,36 +39,79 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	daneEE, err := cmd.Flags().GetBool("dane-ee")
+	if err != nil {
+		return err
+	}
+
+	noDaneEE, err := cmd.Flags().GetBool("no-dane-ee")
+	if err != nil {
+		return err
+	}
+
 	daneTa, err := cmd.Flags().GetBool("dane-ta")
 	if err != nil {
 		return err
 	}
+
 	tcpPort, err := cmd.Flags().GetInt("tcp-port")
 	if err != nil {
 		return err
 	}
+
 	rollover, err := cmd.Flags().GetBool("rollover")
 	if err != nil {
 		return err
 	}
+
 	selector, err := cmd.Flags().GetInt("selector")
 	if err != nil {
 		return err
 	}
 
+	// Handle the case where both --dane-ee and --no-dane-ee are specified
+	if noDaneEE {
+		daneEE = false
+	}
+
+	// Ensure at least one of DANE-EE or DANE-TA is enabled
+	if !daneEE && !daneTa {
+		log.Println("Error: At least one of DANE-EE or DANE-TA must be enabled")
+		os.Exit(1)
+	}
+
 	handlePortUpdate := func(port string) {
 		prefix := "_" + port + "._tcp."
 		domain := subdomain + "." + url
-		req := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, selector)
 
-		if rollover {
-			performRollover(prefix, domain, req)
-		} else {
-			putToCloudflare(prefix, domain, req)
+		// Use appropriate selectors for each usage type if not explicitly specified
+		eeSel := selector
+		taSel := selector
+
+		// If selector is not explicitly set (-1), use defaults
+		if selector == -1 {
+			eeSel = 1 // Default to SPKI(1) for DANE-EE
+			taSel = 0 // Default to Cert(0) for DANE-TA
+		}
+
+		if daneEE {
+			eeReq := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, eeSel)
+			if rollover {
+				performRollover(prefix, domain, eeReq)
+			} else {
+				putToCloudflare(prefix, domain, eeReq)
+			}
 		}
 
 		if daneTa {
-			putToCloudflare(prefix, domain, genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2, selector))
+			taReq := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2, taSel)
+			if rollover && !daneEE {
+				// Only use rollover for DANE-TA if DANE-EE is not enabled
+				performRollover(prefix, domain, taReq)
+			} else {
+				putToCloudflare(prefix, domain, taReq)
+			}
 		}
 	}
 
