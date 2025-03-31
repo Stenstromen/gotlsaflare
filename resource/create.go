@@ -2,6 +2,7 @@ package resource
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -103,18 +104,29 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Collect all ports to process
+	var ports []string
 	if tcpPort != 0 {
-		createTLSARecords(strconv.Itoa(tcpPort))
+		ports = append(ports, strconv.Itoa(tcpPort))
 	}
-
 	if tcp25 {
-		createTLSARecords("25")
+		ports = append(ports, "25")
 	}
 	if tcp465 {
-		createTLSARecords("465")
+		ports = append(ports, "465")
 	}
 	if tcp587 {
-		createTLSARecords("587")
+		ports = append(ports, "587")
+	}
+
+	// Validate that at least one port is specified
+	if len(ports) == 0 {
+		return fmt.Errorf("no ports specified. Please specify at least one port using --tcp-port, --tcp25, --tcp465, or --tcp587")
+	}
+
+	// Process all ports
+	for _, port := range ports {
+		createTLSARecords(port)
 	}
 
 	return nil
