@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD051 -->
 # GoTLSAFlare
 
 ![GoTLSAFlare](./gotlsaflare.webp)
@@ -10,7 +11,11 @@
   - [Build and Run Binary](#build-and-run-binary)
   - [Example Usage](#example-usage)
   - [Practical Usage](#practical-usage)
-    - [Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 1 1)](#create-tlsa-record-dane-ee-3-1-1-and-dane-ta-2-1-1)
+    - [Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 0 1)](#create-tlsa-record-dane-ee-3-1-1-and-dane-ta-2-0-1)
+    - [Create TLSA Record, DANE-TA (2 0 1) only](#create-tlsa-record-dane-ta-2-0-1-only)
+    - [Create TLSA Record, DANE-EE (3 1 1) only (default)](#create-tlsa-record-dane-ee-3-1-1-only-default)
+    - [Create TLSA Record with SHA2-512 matching type](#create-tlsa-record-with-sha2-512-matching-type)
+    - [Create TLSA Record with SHA2-512 matching type for both DANE-EE and DANE-TA](#create-tlsa-record-with-sha2-512-matching-type-for-both-dane-ee-and-dane-ta)
     - [LetsEncrypt Certbot renewal hook](#letsencrypt-certbot-renewal-hook)
     - [LetsEncrypt Certbot renewal hook with rolling update](#letsencrypt-certbot-renewal-hook-with-rolling-update)
   - [Random Notes](#random-notes)
