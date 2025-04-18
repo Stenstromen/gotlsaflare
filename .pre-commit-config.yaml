@@ -4,8 +4,5 @@ repos:
     rev: v0.5.1
     hooks:
       - id: go-vet
-        always_run: true
       - id: go-build
-        always_run: true
       - id: go-mod-tidy
-        always_run: true
