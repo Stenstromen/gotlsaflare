@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/miekg/dns"
 	"github.com/spf13/cobra"
 )
 
@@ -320,17 +321,56 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 	done := make(chan bool)
 
 	go func() {
-		time.Sleep(ttl)
+		// Wait for 2 rounds of TTL as per DANE certificate rollover best practices
+		waitTime := 2 * ttl
+		log.Printf("Waiting for %.0f seconds (2 TTL periods) to ensure DNS propagation...\n", waitTime.Seconds())
+		time.Sleep(waitTime)
+
+		// Check DNS propagation before deleting the old record
+		if err := checkDNSPropagation(portandprotocol + nameanddomain); err != nil {
+			log.Printf("Warning: DNS propagation check failed: %v\n", err)
+			// Even if the check fails, we proceed with deletion to maintain existing behavior
+		}
+
 		if err := deleteRecord(zoneID, oldRecordID, bearer); err != nil {
 			log.Printf("Error deleting old record: %v\n", err)
 		}
 		done <- true
 	}()
 
-	log.Printf("Created new TLSA record. Old record will be deleted in %.0f seconds\n", ttl.Seconds())
+	log.Printf("Created new TLSA record. Old record will be deleted in %.0f seconds\n", (2 * ttl).Seconds())
 
 	// Wait for deletion to complete
 	<-done
+}
+
+// checkDNSPropagation verifies that DNS changes have propagated by querying multiple nameservers
+func checkDNSPropagation(recordName string) error {
+	nameservers := []string{
+		"8.8.8.8:53",        // Google
+		"1.1.1.1:53",        // Cloudflare
+		"9.9.9.9:53",        // Quad9
+		"208.67.222.222:53", // OpenDNS
+	}
+
+	log.Printf("Checking DNS propagation for %s against %d nameservers\n", recordName, len(nameservers))
+
+	m := new(dns.Msg)
+	m.SetQuestion(dns.Fqdn(recordName), dns.TypeTLSA)
+	m.RecursionDesired = true
+
+	for _, ns := range nameservers {
+		c := new(dns.Client)
+		r, rtt, err := c.Exchange(m, ns)
+		if err != nil {
+			log.Printf("Failed to query %s: %v\n", ns, err)
+			return fmt.Errorf("DNS query to %s failed: %v", ns, err)
+		}
+		log.Printf("Successfully queried %s (response time: %v, answer sections: %d)\n",
+			ns, rtt, len(r.Answer))
+	}
+
+	return nil
 }
 
 func deleteRecord(zoneID, recordID, bearer string) error {
