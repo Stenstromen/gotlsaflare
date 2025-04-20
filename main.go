@@ -1,7 +1,15 @@
 package main
 
-import "gotlsaflare/cmd"
+import (
+	"gotlsaflare/cmd"
+	"os"
+)
 
 func main() {
-	cmd.Execute()
+	err := cmd.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	os.Exit(0)
 }

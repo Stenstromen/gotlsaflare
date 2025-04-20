@@ -93,6 +93,8 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
+	var updateErrors []error
+
 	handlePortUpdate := func(port string) {
 		prefix := "_" + port + "._tcp."
 		domain := subdomain + "." + url
@@ -110,9 +112,15 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 		if daneEE {
 			eeReq := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 3, eeSel, matchingType)
 			if rollover {
-				performRollover(prefix, domain, eeReq)
+				err := performRollover(prefix, domain, eeReq)
+				if err != nil {
+					updateErrors = append(updateErrors, fmt.Errorf("error performing DANE-EE rollover for port %s: %w", port, err))
+				}
 			} else {
-				putToCloudflare(prefix, domain, eeReq)
+				err := putToCloudflare(prefix, domain, eeReq)
+				if err != nil {
+					updateErrors = append(updateErrors, fmt.Errorf("error updating DANE-EE for port %s: %w", port, err))
+				}
 			}
 		}
 
@@ -120,9 +128,15 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 			taReq := genCloudflareReq(cert, port, "tcp", subdomain, "Updated", 2, taSel, matchingType)
 			if rollover && !daneEE {
 				// Only use rollover for DANE-TA if DANE-EE is not enabled
-				performRollover(prefix, domain, taReq)
+				err := performRollover(prefix, domain, taReq)
+				if err != nil {
+					updateErrors = append(updateErrors, fmt.Errorf("error performing DANE-TA rollover for port %s: %w", port, err))
+				}
 			} else {
-				putToCloudflare(prefix, domain, taReq)
+				err := putToCloudflare(prefix, domain, taReq)
+				if err != nil {
+					updateErrors = append(updateErrors, fmt.Errorf("error updating DANE-TA for port %s: %w", port, err))
+				}
 			}
 		}
 	}
@@ -152,10 +166,18 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 		handlePortUpdate(port)
 	}
 
+	// Return the first error if any occurred during updates
+	if len(updateErrors) > 0 {
+		for _, err := range updateErrors {
+			log.Println(err)
+		}
+		return updateErrors[0]
+	}
+
 	return nil
 }
 
-func putToCloudflare(portandprotocol string, nameanddomain string, putBody string) {
+func putToCloudflare(portandprotocol string, nameanddomain string, putBody string) error {
 	url := "https://api.cloudflare.com/client/v4/zones"
 	var bearer = "Bearer " + os.Getenv("TOKEN")
 
@@ -163,14 +185,14 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 	var jsonReq JSONRequest
 	if err := json.Unmarshal([]byte(putBody), &jsonReq); err != nil {
 		log.Printf("Error parsing request body: %v\n", err)
-		return
+		return fmt.Errorf("error parsing request body: %v", err)
 	}
 	usage := jsonReq.Data.Usage
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println(err)
-		os.Exit(1)
+		return fmt.Errorf("error creating request: %v", err)
 	}
 
 	req.Header.Add("Authorization", bearer)
@@ -179,69 +201,71 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("Error on response.\n[ERROR] -", err)
+		return fmt.Errorf("error on response: %v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Error while reading the response bytes:", err)
+		return fmt.Errorf("error while reading the response bytes: %v", err)
 	}
 
 	var res Res
 	if err := json.Unmarshal(body, &res); err != nil {
 		log.Println(err)
-		os.Exit(1)
+		return fmt.Errorf("error parsing JSON response: %v", err)
 	}
 
 	searchurl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records"
 	req2, err2 := http.NewRequest("GET", searchurl, nil)
 	if err2 != nil {
 		log.Println(err2)
-		os.Exit(1)
+		return fmt.Errorf("error creating search request: %v", err2)
 	}
 
 	req2.Header.Add("Authorization", bearer)
-	client2 := &http.Client{}
-	resp2, err2 := client2.Do(req2)
+
+	resp2, err2 := client.Do(req2)
 	if err2 != nil {
-		log.Println("Error on response.\n[ERROR] -", err)
+		log.Println("Error on response.\n[ERROR] -", err2)
+		return fmt.Errorf("error on search response: %v", err2)
 	}
 	defer resp2.Body.Close()
+
 	body2, err2 := io.ReadAll(resp2.Body)
 	if err2 != nil {
-		log.Println("Error while reading the response bytes:", err)
+		log.Println("Error while reading the response bytes:", err2)
+		return fmt.Errorf("error while reading the search response bytes: %v", err2)
 	}
 
 	var recordsres RecordsRes
 	if err2 := json.Unmarshal(body2, &recordsres); err2 != nil {
 		log.Println(err2)
-		os.Exit(1)
+		return fmt.Errorf("error parsing records response: %v", err2)
 	}
 
-	var did string
+	var recordid = ""
 
-	for i := range recordsres.Result {
-		if portandprotocol+nameanddomain == recordsres.Result[i].Name &&
-			recordsres.Result[i].Type == "TLSA" &&
-			recordsres.Result[i].Data.Usage == usage {
-			did = recordsres.Result[i].ID
-			break
+	for _, record := range recordsres.Result {
+		if record.Type == "TLSA" && record.Name == portandprotocol+nameanddomain && record.Data.Usage == usage {
+			recordid = record.ID
 		}
 	}
 
-	if did == "" {
+	if recordid == "" {
 		log.Printf("Error: Could not find existing TLSA record with usage %d for %s%s\n",
 			usage, portandprotocol, nameanddomain)
-		os.Exit(1)
+		return fmt.Errorf("could not find existing TLSA record with usage %d for %s%s", usage, portandprotocol, nameanddomain)
 	}
 
-	puturl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records/" + did
+	puturl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records/" + recordid
 
 	var jsonStr = []byte(putBody)
 	req3, err3 := http.NewRequest("PUT", puturl, bytes.NewBuffer(jsonStr))
 	if err3 != nil {
 		log.Println(err3)
-		os.Exit(1)
+		return fmt.Errorf("error creating put request: %v", err3)
 	}
 
 	req3.Header.Set("Content-Type", "application/json")
@@ -251,14 +275,15 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 	resp3, err3 := client3.Do(req3)
 	if err3 != nil {
 		log.Println(err3)
-		os.Exit(1)
+		return fmt.Errorf("error updating record: %v", err3)
 	}
-	defer resp.Body.Close()
+	defer resp3.Body.Close()
 
 	log.Println("Cloudflare Response Status:", resp3.Status)
+	return nil
 }
 
-func performRollover(portandprotocol string, nameanddomain string, putBody string) {
+func performRollover(portandprotocol string, nameanddomain string, putBody string) error {
 	url := "https://api.cloudflare.com/client/v4/zones"
 	bearer := "Bearer " + os.Getenv("TOKEN")
 
@@ -266,16 +291,20 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 	var jsonReq JSONRequest
 	if err := json.Unmarshal([]byte(putBody), &jsonReq); err != nil {
 		log.Printf("Error parsing request body: %v\n", err)
-		return
+		return fmt.Errorf("error parsing request body: %v", err)
 	}
 	usage := jsonReq.Data.Usage
 
 	// Get zone ID and old record first with the correct usage value
-	zoneID, oldRecord := getExistingRecord(url, bearer, portandprotocol, nameanddomain, usage)
+	zoneID, oldRecord, err := getExistingRecord(url, bearer, portandprotocol, nameanddomain, usage)
+	if err != nil {
+		log.Printf("Error getting existing record: %v\n", err)
+		return err
+	}
 
 	if zoneID == "" {
 		log.Println("Error: Could not find zone ID")
-		return
+		return fmt.Errorf("could not find zone ID")
 	}
 
 	// Store old record details
@@ -283,8 +312,7 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 	if oldRecord != nil {
 		oldRecordID = oldRecord.ID
 	} else {
-		putToCloudflare(portandprotocol, nameanddomain, putBody)
-		return
+		return putToCloudflare(portandprotocol, nameanddomain, putBody)
 	}
 
 	// Create new record first
@@ -293,7 +321,7 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(jsonStr))
 	if err != nil {
 		log.Printf("Error creating request: %v\n", err)
-		return
+		return fmt.Errorf("error creating request: %v", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -303,13 +331,13 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Error creating new record: %v\n", err)
-		return
+		return fmt.Errorf("error creating new record: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
 		log.Printf("Error creating new record. Status: %s\n", resp.Status)
-		return
+		return fmt.Errorf("error creating new record. Status: %s", resp.Status)
 	}
 
 	ttl := time.Duration(oldRecord.TTL) * time.Second
@@ -318,7 +346,7 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 	}
 
 	// Create a channel to signal completion
-	done := make(chan bool)
+	done := make(chan error)
 
 	go func() {
 		// Wait for 2 rounds of TTL as per DANE certificate rollover best practices
@@ -334,14 +362,17 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 
 		if err := deleteRecord(zoneID, oldRecordID, bearer); err != nil {
 			log.Printf("Error deleting old record: %v\n", err)
+			done <- err
+			return
 		}
-		done <- true
+		done <- nil
 	}()
 
 	log.Printf("Created new TLSA record. Old record will be deleted in %.0f seconds\n", (2 * ttl).Seconds())
 
 	// Wait for deletion to complete
-	<-done
+	err = <-done
+	return err
 }
 
 // checkDNSPropagation verifies that DNS changes have propagated by querying multiple nameservers
@@ -401,55 +432,73 @@ func deleteRecord(zoneID, recordID, bearer string) error {
 	return nil
 }
 
-func getExistingRecord(url, bearer, portandprotocol, nameanddomain string, usage int) (string, *DNSRecord) {
-	req, _ := http.NewRequest("GET", url, nil)
+func getExistingRecord(url, bearer, portandprotocol, nameanddomain string, usage int) (string, *DNSRecord, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Printf("Error creating request: %v\n", err)
+		return "", nil, fmt.Errorf("error creating request: %v", err)
+	}
 	req.Header.Add("Authorization", bearer)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Error getting zone info: %v\n", err)
-		return "", nil
+		return "", nil, fmt.Errorf("error getting zone info: %v", err)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading response: %v\n", err)
+		return "", nil, fmt.Errorf("error reading response: %v", err)
+	}
+
 	var res Res
 	if err := json.Unmarshal(body, &res); err != nil {
 		log.Printf("Error parsing zone response: %v\n", err)
-		return "", nil
+		return "", nil, fmt.Errorf("error parsing zone response: %v", err)
 	}
 
 	if len(res.Result) == 0 {
 		log.Println("No zones found")
-		return "", nil
+		return "", nil, fmt.Errorf("no zones found")
 	}
 
 	zoneID := res.Result[0].ID
 
 	recordsURL := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records", zoneID)
-	req2, _ := http.NewRequest("GET", recordsURL, nil)
+	req2, err := http.NewRequest("GET", recordsURL, nil)
+	if err != nil {
+		log.Printf("Error creating records request: %v\n", err)
+		return zoneID, nil, fmt.Errorf("error creating records request: %v", err)
+	}
 	req2.Header.Add("Authorization", bearer)
 
 	resp2, err := client.Do(req2)
 	if err != nil {
 		log.Printf("Error getting DNS records: %v\n", err)
-		return zoneID, nil
+		return zoneID, nil, fmt.Errorf("error getting DNS records: %v", err)
 	}
 	defer resp2.Body.Close()
 
-	body2, _ := io.ReadAll(resp2.Body)
+	body2, err := io.ReadAll(resp2.Body)
+	if err != nil {
+		log.Printf("Error reading records response: %v\n", err)
+		return zoneID, nil, fmt.Errorf("error reading records response: %v", err)
+	}
+
 	var recordsRes RecordsRes
 	if err := json.Unmarshal(body2, &recordsRes); err != nil {
 		log.Printf("Error parsing records response: %v\n", err)
-		return zoneID, nil
+		return zoneID, nil, fmt.Errorf("error parsing records response: %v", err)
 	}
 
 	for _, record := range recordsRes.Result {
 		if record.Type == "TLSA" && record.Name == portandprotocol+nameanddomain && record.Data.Usage == usage {
-			return zoneID, &record
+			return zoneID, &record, nil
 		}
 	}
 
-	return zoneID, nil
+	return zoneID, nil, nil
 }

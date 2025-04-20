@@ -135,10 +135,18 @@ func ResourceCreate(cmd *cobra.Command, args []string) error {
 func postToCloudflare(portandprotocol string, nameanddomain string, postBody string) {
 	url := "https://api.cloudflare.com/client/v4/zones"
 	bearer := "Bearer " + os.Getenv("TOKEN")
-
 	// First check if record exists with either usage type (2 for DANE-TA or 3 for DANE-EE)
-	zoneID, existingRecordEE := getExistingRecord(url, bearer, portandprotocol, nameanddomain, 3)
-	_, existingRecordTA := getExistingRecord(url, bearer, portandprotocol, nameanddomain, 2)
+	zoneID, existingRecordEE, err := getExistingRecord(url, bearer, portandprotocol, nameanddomain, 3)
+	if err != nil {
+		log.Printf("Error checking for existing DANE-EE record: %v\n", err)
+		os.Exit(1)
+	}
+
+	_, existingRecordTA, err := getExistingRecord(url, bearer, portandprotocol, nameanddomain, 2)
+	if err != nil {
+		log.Printf("Error checking for existing DANE-TA record: %v\n", err)
+		os.Exit(1)
+	}
 
 	if existingRecordEE != nil || existingRecordTA != nil {
 		log.Printf("Error: TLSA record already exists for %s%s\n", portandprotocol, nameanddomain)

@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
@@ -11,9 +9,10 @@ var rootCmd = &cobra.Command{
 	Short: "Go binary for updating TLSA DANE record on cloudflare from x509 Certificate.",
 }
 
-func Execute() {
+func Execute() error {
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
