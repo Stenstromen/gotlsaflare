@@ -178,5 +178,5 @@ func postToCloudflare(portandprotocol string, nameanddomain string, postBody str
 	}
 	defer resp2.Body.Close()
 
-	log.Println("Cloudflare Response Status:", resp2.Status)
+	fmt.Println("Cloudflare Response Status:", resp2.Status)
 }

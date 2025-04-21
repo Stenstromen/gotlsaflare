@@ -83,13 +83,13 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 
 	// Ensure at least one of DANE-EE or DANE-TA is enabled
 	if !daneEE && !daneTa {
-		log.Println("Error: At least one of DANE-EE or DANE-TA must be enabled")
+		fmt.Println("Error: At least one of DANE-EE or DANE-TA must be enabled")
 		os.Exit(1)
 	}
 
 	// Validate matching type
 	if matchingType != 1 && matchingType != 2 {
-		log.Println("Error: Matching type must be either 1 (SHA2-256) or 2 (SHA2-512)")
+		fmt.Println("Error: Matching type must be either 1 (SHA2-256) or 2 (SHA2-512)")
 		os.Exit(1)
 	}
 
@@ -169,7 +169,7 @@ func ResourceUpdate(cmd *cobra.Command, args []string) error {
 	// Return the first error if any occurred during updates
 	if len(updateErrors) > 0 {
 		for _, err := range updateErrors {
-			log.Println(err)
+			fmt.Println(err)
 		}
 		return updateErrors[0]
 	}
@@ -279,7 +279,7 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 	}
 	defer resp3.Body.Close()
 
-	log.Println("Cloudflare Response Status:", resp3.Status)
+	fmt.Println("Cloudflare Response Status:", resp3.Status)
 	return nil
 }
 
@@ -351,7 +351,7 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 	go func() {
 		// Wait for 2 rounds of TTL as per DANE certificate rollover best practices
 		waitTime := 2 * ttl
-		log.Printf("Waiting for %.0f seconds (2 TTL periods) to ensure DNS propagation...\n", waitTime.Seconds())
+		fmt.Printf("Waiting for %.0f seconds (2 TTL periods) to ensure DNS propagation...\n", waitTime.Seconds())
 		time.Sleep(waitTime)
 
 		// Check DNS propagation before deleting the old record
@@ -368,7 +368,7 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 		done <- nil
 	}()
 
-	log.Printf("Created new TLSA record. Old record will be deleted in %.0f seconds\n", (2 * ttl).Seconds())
+	fmt.Printf("Created new TLSA record. Old record will be deleted in %.0f seconds\n", (2 * ttl).Seconds())
 
 	// Wait for deletion to complete
 	err = <-done
@@ -384,7 +384,7 @@ func checkDNSPropagation(recordName string) error {
 		"208.67.222.222:53", // OpenDNS
 	}
 
-	log.Printf("Checking DNS propagation for %s against %d nameservers\n", recordName, len(nameservers))
+	fmt.Printf("Checking DNS propagation for %s against %d nameservers\n", recordName, len(nameservers))
 
 	m := new(dns.Msg)
 	m.SetQuestion(dns.Fqdn(recordName), dns.TypeTLSA)
@@ -397,7 +397,7 @@ func checkDNSPropagation(recordName string) error {
 			log.Printf("Failed to query %s: %v\n", ns, err)
 			return fmt.Errorf("DNS query to %s failed: %v", ns, err)
 		}
-		log.Printf("Successfully queried %s (response time: %v, answer sections: %d)\n",
+		fmt.Printf("Successfully queried %s (response time: %v, answer sections: %d)\n",
 			ns, rtt, len(r.Answer))
 	}
 
@@ -428,7 +428,7 @@ func deleteRecord(zoneID, recordID, bearer string) error {
 		return fmt.Errorf("delete request failed with status: %s", resp.Status)
 	}
 
-	log.Printf("Deleted old TLSA record. Status: %s\n", resp.Status)
+	fmt.Printf("Deleted old TLSA record. Status: %s\n", resp.Status)
 	return nil
 }
 
