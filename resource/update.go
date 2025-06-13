@@ -465,7 +465,17 @@ func getExistingRecord(url, bearer, portandprotocol, nameanddomain string, usage
 		return "", nil, fmt.Errorf("no zones found")
 	}
 
-	zoneID := res.Result[0].ID
+	zoneID := ""
+	for _, zone := range res.Result {
+		if zone.Name == nameanddomain {
+			zoneID = zone.ID
+		}
+	}
+
+	if zoneID == "" {
+		log.Println("No matching zones found")
+		return "", nil, fmt.Errorf("no matching zones found")
+	}
 
 	recordsURL := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records", zoneID)
 	req2, err := http.NewRequest("GET", recordsURL, nil)
