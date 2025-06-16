@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/miekg/dns"
@@ -217,7 +218,20 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 		return fmt.Errorf("error parsing JSON response: %v", err)
 	}
 
-	searchurl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records"
+	zoneID := ""
+	for _, zone := range res.Result {
+		if strings.HasSuffix(nameanddomain, zone.Name) {
+			zoneID = zone.ID
+		}
+	}
+
+	if zoneID == "" {
+		log.Println("No matching zones found")
+		return fmt.Errorf("no matching zones found")
+	}
+
+	searchurl := "https://api.cloudflare.com/client/v4/zones/" + zoneID + "/dns_records"
+
 	req2, err2 := http.NewRequest("GET", searchurl, nil)
 	if err2 != nil {
 		log.Println(err2)
@@ -259,7 +273,7 @@ func putToCloudflare(portandprotocol string, nameanddomain string, putBody strin
 		return fmt.Errorf("could not find existing TLSA record with usage %d for %s%s", usage, portandprotocol, nameanddomain)
 	}
 
-	puturl := "https://api.cloudflare.com/client/v4/zones/" + res.Result[0].ID + "/dns_records/" + recordid
+	puturl := "https://api.cloudflare.com/client/v4/zones/" + zoneID + "/dns_records/" + recordid
 
 	var jsonStr = []byte(putBody)
 	req3, err3 := http.NewRequest("PUT", puturl, bytes.NewBuffer(jsonStr))
