@@ -481,7 +481,7 @@ func getExistingRecord(url, bearer, portandprotocol, nameanddomain string, usage
 
 	zoneID := ""
 	for _, zone := range res.Result {
-		if zone.Name == nameanddomain {
+		if strings.HasSuffix(nameanddomain, zone.Name) {
 			zoneID = zone.ID
 		}
 	}
