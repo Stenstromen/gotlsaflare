@@ -1,5 +1,8 @@
 version: 2
 project_name: gotlsaflare
+before:
+  hooks:
+    - go test ./...
 builds:
   - env: [CGO_ENABLED=0]
     goos:

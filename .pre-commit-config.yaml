@@ -1,8 +1,28 @@
 ---
 repos:
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.5.1
+  - repo: local
     hooks:
-      - id: go-vet
       - id: go-build
+        name: Go Build
+        entry: bash -c 'GOEXPERIMENT=greenteagc CGO_ENABLED=0 GOOS=linux go build -a -ldflags='-w -s' -installsuffix cgo -o /tmp/gotlsaflare ./'
+        language: system
+        types: [go]
+        pass_filenames: false
       - id: go-mod-tidy
+        name: Go Mod Tidy
+        entry: go mod tidy
+        language: system
+        types: [go]
+        pass_filenames: false
+      - id: go-vet
+        name: Go Vet
+        entry: go vet ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+      - id: go-test
+        name: Go Test
+        entry: go test ./...
+        language: system
+        types: [go]
+        pass_filenames: false
