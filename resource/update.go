@@ -371,7 +371,12 @@ func performRollover(portandprotocol string, nameanddomain string, putBody strin
 		// Check DNS propagation before deleting the old record
 		if err := checkDNSPropagation(portandprotocol + nameanddomain); err != nil {
 			log.Printf("Warning: DNS propagation check failed: %v\n", err)
-			// Even if the check fails, we proceed with deletion to maintain existing behavior
+			log.Printf("Preserving old TLSA record to maintain service availability. Both old and new records will remain.\n")
+			// Return error to indicate failure, but do NOT delete the old record
+			// This ensures the server can continue using the existing certificate
+			// As requested in #35
+			done <- fmt.Errorf("DNS propagation check failed: %v - old record preserved for safety", err)
+			return
 		}
 
 		if err := deleteRecord(zoneID, oldRecordID, bearer); err != nil {
