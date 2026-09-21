@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"fmt"
 	"log"
 	"os"
 )
@@ -18,72 +19,82 @@ func getHash(certfile string, selector int, matchingType int) (string, string) {
 	}
 
 	// Get end-entity certificate (first in chain)
-	block, rest := pem.Decode([]byte(pemContent))
+	block, rest := pem.Decode(pemContent)
 	if block == nil {
 		log.Println("Failed to parse pem file")
 		os.Exit(1)
 	}
-	eeCert, _ := x509.ParseCertificate(block.Bytes)
-	var eeHash string
-
-	if selector == 0 {
-		// Hash the entire certificate
-		if matchingType == 1 {
-			// SHA2-256
-			sum := sha256.Sum256(block.Bytes)
-			eeHash = hex.EncodeToString(sum[:])
-		} else if matchingType == 2 {
-			// SHA2-512
-			sum := sha512.Sum512(block.Bytes)
-			eeHash = hex.EncodeToString(sum[:])
-		}
-	} else {
-		// Hash just the public key
-		if matchingType == 1 {
-			// SHA2-256
-			eeHash = getPublicKeySHA256(eeCert)
-		} else if matchingType == 2 {
-			// SHA2-512
-			eeHash = getPublicKeySHA512(eeCert)
-		}
+	eeCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+	eeHash, err := certificateHash(eeCert, selector, matchingType)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
 	}
 
 	// Get CA certificate (last in chain)
 	var caCert *x509.Certificate
-	var caHash string
 	for len(rest) > 0 {
 		block, rest = pem.Decode(rest)
 		if block == nil {
 			break
 		}
-		caCert, _ = x509.ParseCertificate(block.Bytes)
+		if block.Type != "CERTIFICATE" {
+			continue
+		}
+		parsed, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+		caCert = parsed
 	}
 
+	var caHash string
 	if caCert != nil {
-		if selector == 0 {
-			// Hash the entire CA certificate
-			if matchingType == 1 {
-				// SHA2-256
-				sum := sha256.Sum256(block.Bytes)
-				caHash = hex.EncodeToString(sum[:])
-			} else if matchingType == 2 {
-				// SHA2-512
-				sum := sha512.Sum512(block.Bytes)
-				caHash = hex.EncodeToString(sum[:])
-			}
-		} else {
-			// Hash just the public key
-			if matchingType == 1 {
-				// SHA2-256
-				caHash = getPublicKeySHA256(caCert)
-			} else if matchingType == 2 {
-				// SHA2-512
-				caHash = getPublicKeySHA512(caCert)
-			}
+		caHash, err = certificateHash(caCert, selector, matchingType)
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
 		}
 	}
 
 	return eeHash, caHash
+}
+
+// certificateHash is the TLSA association hash.
+// Selector 0 hashes the full certificate DER. Any other selector hashes the
+// SubjectPublicKeyInfo, matching openssl pkey -pubin -outform DER.
+// Matching type 1 is SHA2-256 and matching type 2 is SHA2-512.
+func certificateHash(cert *x509.Certificate, selector int, matchingType int) (string, error) {
+	if cert == nil {
+		return "", fmt.Errorf("nil certificate")
+	}
+
+	var data []byte
+	if selector == 0 {
+		data = cert.Raw
+	} else {
+		var err error
+		data, err = x509.MarshalPKIXPublicKey(cert.PublicKey)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	switch matchingType {
+	case 1:
+		sum := sha256.Sum256(data)
+		return hex.EncodeToString(sum[:]), nil
+	case 2:
+		sum := sha512.Sum512(data)
+		return hex.EncodeToString(sum[:]), nil
+	default:
+		return "", fmt.Errorf("unsupported matching type %d", matchingType)
+	}
 }
 
 // For backward compatibility

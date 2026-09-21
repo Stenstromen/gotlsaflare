@@ -10,6 +10,7 @@
   - [Download and Run Binary](#download-and-run-binary)
   - [Build and Run Binary](#build-and-run-binary)
   - [Example Usage](#example-usage)
+  - [Verify TLSA Records](#verify-tlsa-records)
   - [Practical Usage](#practical-usage)
     - [Create TLSA Record, DANE-EE (3 1 1) and DANE-TA (2 0 1)](#create-tlsa-record-dane-ee-3-1-1-and-dane-ta-2-0-1)
     - [Create TLSA Record, DANE-TA (2 0 1) only](#create-tlsa-record-dane-ta-2-0-1-only)
@@ -93,6 +94,15 @@ export TOKEN="# Cloudflare API TOKEN"
 
 # Create TLSA Record with SHA2-512 matching type for both DANE-EE and DANE-TA
 ./gotlsaflare create --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/certificate.pem --matching-type 2
+
+# Verify DANE-EE (3 1 1) by connecting (SMTP STARTTLS on port 25)
+./gotlsaflare verify --url example.com --subdomain email --tcp25
+
+# Verify DANE-EE (3 1 1) and DANE-TA (2 0 1) from a local full chain
+./gotlsaflare verify --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
+
+# Verify DANE-TA (2 0 1) only against the live endpoint
+./gotlsaflare verify --url example.com --subdomain email --tcp25 --dane-ta --no-dane-ee
 ```
 
 ```bash
@@ -107,11 +117,29 @@ Available Commands:
   create      Create TLSA DNS Record
   help        Help about any command
   update      Update TLSA DNS Record
+  verify      Verify TLSA DNS records against a certificate
 
 Flags:
   -h, --help   help for gotlsaflare
 
 Use "gotlsaflare [command] --help" for more information about a command.
+```
+
+## Verify TLSA Records
+
+`verify` hashes a certificate and compares it to the TLSA records published at `_port._tcp.subdomain.domain`. A check passes when any record of that usage, selector, and matching type matches, including a record kept during rollover.
+
+Omit `--cert` to connect to `subdomain.domain`. Ports 25 and 587 use SMTP STARTTLS. Other ports use TLS. Pass `--starttls smtp` or `--starttls tls` to override that.
+
+DANE-EE (3 1 1) is the SHA2-256 hash of the end-entity SubjectPublicKeyInfo. DANE-TA (2 0 1) is the SHA2-256 hash of the last certificate in the chain.
+
+```bash
+# Same check as: openssl s_client -starttls smtp | openssl x509 -pubkey | openssl pkey -pubin -outform DER | openssl dgst -sha256
+# and: dig tlsa +short _25._tcp.email.example.com
+gotlsaflare verify --url example.com --subdomain email --tcp25
+
+# Same check from the PEM used to publish the records
+gotlsaflare verify --url example.com --subdomain email --tcp25 --dane-ta --cert path/to/fullchain.pem
 ```
 
 ## Practical Usage
